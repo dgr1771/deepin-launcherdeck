@@ -77,4 +77,5 @@ private:
     QTimer *m_animTimer = nullptr;
     qint64 m_animT0 = 0;                               // 动画起始时刻（ms）
     bool m_animating = false;
+    QVector<qreal> m_washRotL, m_washRotR;             // 每张牌的洗牌随机旋转（按局号做种，重绘稳定）
 };

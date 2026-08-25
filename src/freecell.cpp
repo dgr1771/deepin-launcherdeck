@@ -157,8 +157,10 @@ FreeCellBoard::FreeCellBoard(QWidget *parent) : QWidget(parent) {
     setMouseTracking(false);
 }
 
-// ---------------- 发牌动画：中央堆三段抖洗(~900ms) → 逐张飞出(18ms 错峰+160ms 飞行) ----------------
-static const int WASH_MS = 900, STAGGER_MS = 18, FLIGHT_MS = 160;
+// ---------------- 发牌动画（win 版逐帧参数复刻）----------------
+// 洗牌：每张牌独立 左甩→右甩→归中（900ms，逐张 6ms 错峰、随机旋转、0.55 缩放、淡入）
+// 发牌：1300ms 后从顶部牌堆逐张飞出（18ms 错峰 + 160ms easeOutCubic + 0.55→1 放大），落地翻面
+static const int WASH_DUR = 900, WASH_STAG = 6, DEAL_T0 = 1300, STAGGER_MS = 18, FLIGHT_MS = 160;
 
 void FreeCellBoard::startDealAnimation() {
     m_animating = true;
@@ -169,7 +171,7 @@ void FreeCellBoard::startDealAnimation() {
         connect(m_animTimer, &QTimer::timeout, this, [this] {
             if (!m_animating) { m_animTimer->stop(); return; }
             const qint64 t = QDateTime::currentMSecsSinceEpoch() - m_animT0;
-            if (t > WASH_MS + 51 * STAGGER_MS + FLIGHT_MS + 80) {
+            if (t > DEAL_T0 + 51 * STAGGER_MS + FLIGHT_MS + 80) {
                 m_animating = false;
                 m_animTimer->stop();
                 update();
@@ -226,6 +228,14 @@ void FreeCellBoard::newGame(int dealNo) {
         c.joker = (msIdx >= 48);
         if (c.joker) { c.suit = 3; c.rank = 13; }
         m_s.cols[i % 8].append(c);
+    }
+    // 洗牌随机旋转按局号做种（重绘不抖动，同局观感一致）
+    {
+        std::mt19937 rng((quint32)dealNo);
+        std::uniform_real_distribution<qreal> rot(6.0, 14.0);
+        m_washRotL.resize(52);
+        m_washRotR.resize(52);
+        for (int k = 0; k < 52; ++k) { m_washRotL[k] = -rot(rng); m_washRotR[k] = rot(rng); }
     }
     startDealAnimation();
     update();
@@ -409,39 +419,63 @@ void FreeCellBoard::paintEvent(QPaintEvent *) {
         }
     }
 
-    // 列牌（发牌动画期间：洗牌期在中央堆画牌背，飞行期从中央插值到落点，落地翻面）
+    // 列牌（win 版洗牌逐帧复刻：顶部小牌堆 0.55 缩放，每张独立 左甩→右甩→归中
+    // 900ms + 6ms 错峰 + 随机旋转 ±6-14° + 淡入；1300ms 后逐张飞出放大落位翻面）
     const qint64 nowMs = QDateTime::currentMSecsSinceEpoch();
     const qint64 t = m_animating ? nowMs - m_animT0 : INT64_MAX;
-    const QPointF pileCenter(width() / 2.0 - m_cw / 2.0, height() / 2.0 - m_ch / 2.0);
-    auto pilePos = [&](int k) {
-        // 三段抖洗：摆幅逐段衰减；堆叠小偏移营造厚度
-        qreal shake = 0.0;
-        if (t < WASH_MS) {
-            const int segMs = WASH_MS / 3;
-            const int seg = int(t) / segMs;
-            const qreal st = (t % segMs) / qreal(segMs);
-            shake = std::sin(st * M_PI * 3.0) * (11.0 - seg * 2.8);
+    const QPointF pileC(width() / 2.0, TOP_Y + m_ch * 0.55 / 2.0);   // 顶部发牌位（缩放牌堆的中心）
+    auto washPose = [&](int k, qreal &px, qreal &py, qreal &rot, qreal &alpha) {
+        px = pileC.x(); py = pileC.y(); rot = 0.0; alpha = 1.0;
+        const qint64 at = t - qint64(k) * WASH_STAG;
+        if (at < 0) { alpha = 0.0; return; }
+        alpha = qMin<qreal>(1.0, at / 140.0);   // 快速淡入
+        const qreal pr = qMin<qreal>(1.0, at / qreal(WASH_DUR));
+        auto lerp = [](qreal a, qreal b, qreal u) { return a + (b - a) * u; };
+        if (pr < 0.32) {
+            const qreal u = pr / 0.32;
+            px = lerp(pileC.x(), pileC.x() - 60, u); py = lerp(pileC.y(), pileC.y() + 8, u);
+            rot = lerp(0.0, m_washRotL[k], u);
+        } else if (pr < 0.68) {
+            const qreal u = (pr - 0.32) / 0.36;
+            px = lerp(pileC.x() - 60, pileC.x() + 60, u); py = lerp(pileC.y() + 8, pileC.y() + 4, u);
+            rot = lerp(m_washRotL[k], m_washRotR[k], u);
+        } else {
+            const qreal u = (pr - 0.68) / 0.32;
+            px = lerp(pileC.x() + 60, pileC.x(), u); py = lerp(pileC.y() + 4, pileC.y(), u);
+            rot = lerp(m_washRotR[k], 0.0, u);
         }
-        return QPointF(pileCenter.x() + shake + (k % 7 - 3) * 0.8,
-                       pileCenter.y() - k * 0.35);
     };
     for (int i = 0; i < 8; ++i) {
         const auto &col = m_s.cols[i];
         for (int idx = 0; idx < col.size(); ++idx) {
             const int k = idx * 8 + i;                    // 发牌序（i%8 轮流发）
-            const qint64 flyAt = WASH_MS + qint64(k) * STAGGER_MS;
+            const qint64 flyAt = DEAL_T0 + qint64(k) * STAGGER_MS;
             const bool sel = (m_selZone == 0 && m_selI == i && idx >= m_selIdx);
             if (t < flyAt + FLIGHT_MS) {
-                if (t < flyAt) {                          // 还在中央堆：牌背
-                    const QPointF pp = pilePos(k);
-                    drawBack(p, QRect(qRound(pp.x()), qRound(pp.y()), m_cw, m_ch));
-                } else {                                  // 飞行：牌背从堆插值到落点
-                    const QPointF pp = pilePos(0);
+                if (t < flyAt) {                          // 洗牌期：顶部小牌堆甩动
+                    qreal px, py, rot, alpha;
+                    washPose(k, px, py, rot, alpha);
+                    if (alpha > 0.01) {
+                        p.save();
+                        p.setOpacity(alpha);
+                        p.translate(px, py);
+                        p.rotate(rot);
+                        p.scale(0.55, 0.55);
+                        drawBack(p, QRect(-m_cw / 2, -m_ch / 2, m_cw, m_ch));
+                        p.restore();
+                    }
+                } else {                                  // 飞行：堆位→落点，0.55→1 放大
                     const qreal pr = (t - flyAt) / qreal(FLIGHT_MS);
                     const qreal e = 1.0 - std::pow(1.0 - pr, 3.0);   // easeOutCubic
                     const QRect fin = cardRect(0, i, idx);
-                    drawBack(p, QRect(qRound(pp.x() + (fin.x() - pp.x()) * e),
-                                      qRound(pp.y() + (fin.y() - pp.y()) * e), m_cw, m_ch));
+                    const qreal fx = pileC.x() + (fin.center().x() - pileC.x()) * e;
+                    const qreal fy = pileC.y() + (fin.center().y() - pileC.y()) * e;
+                    const qreal sc = 0.55 + 0.45 * e;
+                    p.save();
+                    p.translate(fx, fy);
+                    p.scale(sc, sc);
+                    drawBack(p, QRect(-m_cw / 2, -m_ch / 2, m_cw, m_ch));
+                    p.restore();
                 }
                 continue;
             }
