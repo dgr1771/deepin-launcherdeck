@@ -134,6 +134,17 @@ void DeckCard::drawTarotBack(QPainter &p) {
         p.setBrush(halo);
         p.drawEllipse(center, isz * 0.95, isz * 0.95);
         p.drawPixmap(QRect(center.x() - isz / 2, center.y() - isz / 2, isz, isz), m_icon);
+    } else {
+        // 主题+兜底主题都找不到：名字首字金徽（任何牌都不会空白）
+        const qreal br = qMin(w, h) * 0.19;
+        const QPointF c(w / 2, h * 0.40);
+        p.setPen(QPen(QColor(255, 222, 150, 190), 1.5));
+        p.setBrush(QColor(255, 200, 92, 40));
+        p.drawEllipse(c, br, br);
+        p.setPen(QColor(255, 230, 170, 235));
+        p.setFont(QFont(QStringLiteral("Noto Sans CJK SC"), qMax<qreal>(12, br * 0.9), QFont::Bold));
+        p.drawText(QRectF(c.x() - br, c.y() - br, br * 2, br * 2), Qt::AlignCenter,
+                   m_app.name.left(1));
     }
     p.setFont(QFont(QStringLiteral("Noto Sans CJK SC"), qMax<qreal>(8.5, h / 13.5)));
     p.setPen(QColor(240, 244, 252, 240));

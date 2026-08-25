@@ -50,7 +50,9 @@ int main(int argc, char *argv[]) {
     DApplication app(argc, argv);
     app.setOrganizationName("dgr");
     app.setApplicationName("deepin-launcherdeck");
-    app.setApplicationVersion("0.1.0");
+    app.setApplicationVersion("0.6.2");
+    // 图标主题兜底：bloom 缺系统图标（如 user-trash 只在 hazy-color），缺名时回退查 hazy-color
+    QIcon::setFallbackThemeName(QStringLiteral("hazy-color"));
     app.setProductName(QStringLiteral("应用牌堆"));
     app.setApplicationDescription(QStringLiteral("托盘常驻 + 全局热键的塔罗牌阵应用启动器（DTK 原生版）"));
     app.loadTranslator();
