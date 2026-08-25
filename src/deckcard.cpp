@@ -123,20 +123,24 @@ void DeckCard::drawTarotBack(QPainter &p) {
         p.drawEllipse(QPointF(x, y), r, r);
     }
 
-    // 中央大星徽（牌背的塔罗身份）
-    {
-        const QPointF c(w / 2, h / 2);
-        const qreal R = qMin(w, h) * 0.16;
-        QPainterPath star;
-        star.moveTo(c.x(), c.y() - R);
-        star.quadTo(c.x() + R * 0.32, c.y() - R * 0.32, c.x() + R, c.y());
-        star.quadTo(c.x() + R * 0.32, c.y() + R * 0.32, c.x(), c.y() + R);
-        star.quadTo(c.x() - R * 0.32, c.y() + R * 0.32, c.x() - R, c.y());
-        star.quadTo(c.x() - R * 0.32, c.y() - R * 0.32, c.x(), c.y() - R);
-        p.setPen(QPen(QColor(255, 222, 150, 170), 1.2));
-        p.setBrush(QColor(255, 205, 105, 36));
-        p.drawPath(star);
+    // 图标 + 名称直接在牌背上可见（win 版如此：星夜是底纹不是遮罩——牌必须一眼可辨识）
+    if (!m_icon.isNull()) {
+        const int isz = qMin<int>(w * 0.42, h * 0.36);
+        const QPointF center(w / 2, h * 0.40);
+        QRadialGradient halo(center, isz * 0.95);
+        halo.setColorAt(0.0, QColor(255, 255, 255, 42));
+        halo.setColorAt(1.0, QColor(255, 255, 255, 0));
+        p.setPen(Qt::NoPen);
+        p.setBrush(halo);
+        p.drawEllipse(center, isz * 0.95, isz * 0.95);
+        p.drawPixmap(QRect(center.x() - isz / 2, center.y() - isz / 2, isz, isz), m_icon);
     }
+    p.setFont(QFont(QStringLiteral("Noto Sans CJK SC"), qMax<qreal>(8.5, h / 13.5)));
+    p.setPen(QColor(240, 244, 252, 240));
+    QTextOption nopt;
+    nopt.setAlignment(Qt::AlignHCenter | Qt::AlignTop);
+    nopt.setWrapMode(QTextOption::WordWrap);
+    p.drawText(QRectF(8, h * 0.64, w - 16, h * 0.32), m_app.name, nopt);
 
     // 金线内框 + 四角菱形饰
     QPainterPath inner;
