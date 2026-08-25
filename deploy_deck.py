@@ -140,9 +140,34 @@ def probe(c):
         rc, out, _ = run(c, cmd)
         print("\n[%s]\n%s" % (name, out.strip() or "(空)"))
 
+def deb(c):
+    print("远端 dpkg-buildpackage 打包 ...")
+    cmd = ("cd %s && chmod +x debian/rules && rm -rf obj-x86_64-linux-gnu && "
+           "dpkg-buildpackage -us -uc -b 2>&1 | tail -12; "
+           "ls -lh ../deepin-launcherdeck_*.deb 2>/dev/null" % REMOTE_ROOT)
+    rc, out, err = run(c, cmd, timeout=300)
+    print(out)
+    if err.strip(): print("[stderr]", err[:400])
+
+def install(c):
+    print("上传 deb 并安装 ...")
+    rc, out, _ = run(c, "ls %s/../deepin-launcherdeck_*.deb 2>/dev/null | head -1" % REMOTE_ROOT)
+    deb_path = out.strip()
+    if not deb_path or ".deb" not in deb_path:
+        print("未找到 deb，先运行: python deploy_deck.py deb"); return
+    local_deb = os.path.join(LOCAL_ROOT, os.path.basename(deb_path))
+    sftp = c.open_sftp()
+    sftp.get(deb_path, local_deb); sftp.close()
+    print("下载:", local_deb)
+    rc, out, err = run(c, "echo %s | sudo -S -p '' dpkg -i %s 2>&1 | tail -4; "
+                          "echo %s | sudo -S -p '' apt-get install -f -y 2>&1 | tail -3"
+                          % (PASS, deb_path, PASS), timeout=120)
+    print(out)
+    if err.strip(): print("[stderr]", err[:300])
+
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("cmd", choices=["probe", "sync", "build", "launch", "shot", "status", "logs", "kill"])
+    ap.add_argument("cmd", choices=["probe", "sync", "build", "launch", "shot", "status", "logs", "kill", "deb", "install"])
     ap.add_argument("--debug", action="store_true", help="启动即显示面板并进游戏模式（联测）")
     ap.add_argument("--show", action="store_true", help="启动即显示面板（塔罗模式联测）")
     a = ap.parse_args()
@@ -151,7 +176,8 @@ def main():
     print("已连接\n")
     {"probe": probe, "sync": sync, "build": build,
      "launch": lambda cc: launch(cc, a.debug, a.show), "shot": shot,
-     "status": status, "logs": logs, "kill": kill}[a.cmd](c)
+     "status": status, "logs": logs, "kill": kill,
+     "deb": deb, "install": install}[a.cmd](c)
     c.close()
 
 if __name__ == "__main__":

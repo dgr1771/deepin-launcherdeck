@@ -7,9 +7,11 @@
 class QLineEdit;
 class QScrollArea;
 class QVBoxLayout;
+class QHBoxLayout;
 class FlowLayout;
 class QPushButton;
 class QLabel;
+class QButtonGroup;
 
 class TarotPanel : public QWidget {
     Q_OBJECT
@@ -36,6 +38,7 @@ private:
     void loadGame();
     void clearSavedGame();
     void updateGameChrome();
+    void rebuildChips();     // 花色过滤行（按各花色实际数量生成，空花色隐藏）
     QStringList appNamesByUsage() const;   // 按使用排名的应用名（前 48 注入牌面）
 
     QVector<AppEntry> m_apps;
@@ -49,5 +52,8 @@ private:
     QLabel *m_moveLbl = nullptr;
     QLabel *m_subLbl = nullptr;
     QTimer *m_refitTimer = nullptr;
+    QHBoxLayout *m_chipsLayout = nullptr;
+    QButtonGroup *m_chipGroup = nullptr;
+    QString m_filterSuit = QStringLiteral("all");
     bool gameMode = false;
 };

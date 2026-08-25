@@ -2,6 +2,7 @@
 #include "deckcard.h"
 #include "flowlayout.h"
 #include <algorithm>
+#include <QButtonGroup>
 #include <QDesktopServices>
 #include <QEvent>
 #include <QFile>
@@ -91,6 +92,13 @@ void TarotPanel::buildUi() {
     top->addWidget(m_search);
     connect(m_search, &QLineEdit::textChanged, this, [this](const QString &t) { rebuildGrid(t); });
 
+    // 花色过滤行（rebuildChips 按实际数量填充，空花色隐藏）
+    m_chipsLayout = new QHBoxLayout();
+    m_chipsLayout->setSpacing(6);
+    m_chipGroup = new QButtonGroup(this);
+    m_chipGroup->setExclusive(true);
+    root->addLayout(m_chipsLayout);
+
     m_scroll = new QScrollArea(this);
     m_scroll->setWidgetResizable(true);
     m_scroll->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);   // 宽度即换行依据——不许横向滚
@@ -144,9 +152,57 @@ void TarotPanel::refresh() {
         a.count = s->value(QStringLiteral("usage/") + a.name).toUInt();
     // 游戏模式不重建牌阵（FCard 存名字符串，重扫不破坏牌局；省一份隐藏网格的 CPU）
     if (!gameMode) rebuildGrid(m_search->text());
+    rebuildChips();
     if (m_subLbl)
         m_subLbl->setText(QStringLiteral("本机 %1 款程序入阵 · 常用自动浮前 · 零输入 — 点牌即达")
                               .arg(m_apps.size()));
+}
+
+// ---------------- 花色过滤行 ----------------
+
+void TarotPanel::rebuildChips() {
+    if (!m_chipsLayout) return;
+    while (QLayoutItem *it = m_chipsLayout->takeAt(0)) {
+        if (QWidget *bw = it->widget()) bw->deleteLater();
+        delete it;
+    }
+    struct SuitDef { const char *id; const char *label; };
+    static const SuitDef defs[] = {
+        {"all",          "\xF0\x9F\x83\x8F 全部"},        // 🃏
+        {"network",      "♦ 社交通讯"},
+        {"audiovideo",   "♣ 影音游戏"},
+        {"browser",      "♥ 浏览器"},
+        {"development",  "♠ 开发工具"},
+        {"utility",      "★ 效率工具"},
+        {"system",       "⚙ 系统组件"},
+        {"other",        "✦ 未名之牌"},
+    };
+    QMap<QString, int> cnt;
+    for (const AppEntry &a : m_apps) cnt[a.suit]++;
+    const QString chipQss = QStringLiteral(
+        "QPushButton { border-radius: 13px; padding: 4px 12px; font-size: 11.5px;"
+        "  color: rgba(255,255,255,0.78); background: rgba(255,255,255,0.06);"
+        "  border: 1px solid rgba(255,255,255,0.13); }"
+        "QPushButton:hover { background: rgba(255,255,255,0.12); }"
+        "QPushButton:checked { color: #ffd782; border-color: rgba(255,215,130,0.75);"
+        "  background: rgba(255,215,130,0.13); }");
+    for (const SuitDef &d : defs) {
+        const QString id = QString::fromLatin1(d.id);
+        const int n = (id == QLatin1String("all")) ? m_apps.size() : cnt.value(id, 0);
+        if (id != QLatin1String("all") && n == 0) continue;
+        auto *b = new QPushButton(QStringLiteral("%1 %2").arg(QString::fromUtf8(d.label)).arg(n), this);
+        b->setCheckable(true);
+        b->setChecked(m_filterSuit == id);
+        b->setCursor(Qt::PointingHandCursor);
+        b->setStyleSheet(chipQss);
+        connect(b, &QPushButton::clicked, this, [this, id] {
+            m_filterSuit = id;
+            rebuildGrid(m_search->text());
+        });
+        m_chipGroup->addButton(b);
+        m_chipsLayout->addWidget(b);
+    }
+    m_chipsLayout->addStretch();
 }
 
 // ---------------- 模式切换 / 进度存取 ----------------
@@ -273,6 +329,10 @@ void TarotPanel::rebuildGrid(const QString &filter) {
     }
 
     QVector<AppEntry> list = m_apps;
+    if (m_filterSuit != QLatin1String("all"))
+        list.erase(std::remove_if(list.begin(), list.end(), [&](const AppEntry &a) {
+                       return a.suit != m_filterSuit;
+                   }), list.end());
     if (!filter.isEmpty()) {
         const QString q = filter.toLower();
         list.erase(std::remove_if(list.begin(), list.end(), [&](const AppEntry &a) {

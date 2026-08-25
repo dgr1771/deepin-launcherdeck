@@ -1,0 +1,7 @@
+deepin-launcherdeck (0.4.0-1) unstable; urgency=medium
+
+  * 塔罗牌阵启动模式：自适应缩放、花色归类、星夜牌面自绘
+  * 空当接龙游戏模式：微软经典发牌、标准规则、进度持久化
+  * 托盘常驻 + Ctrl+J 全局热键
+
+ -- dgr <dgr@dgr-PC>  Mon, 25 Aug 2026 14:30:00 +0800

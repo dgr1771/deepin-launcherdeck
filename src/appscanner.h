@@ -8,7 +8,8 @@ struct AppEntry {
     QString comment;     // 描述（tooltip）
     QString icon;        // 主题名或绝对路径
     QString desktopPath; // .desktop 文件路径（启动入口）
-    QString categories;  // 原始 Categories（后续花色归类用）
+    QString categories;  // 原始 Categories（花色归类依据）
+    QString suit;        // 花色 id：network/audiovideo/browser/development/utility/system/other
     quint32 count = 0;   // 启动次数（常用浮前）
 };
 

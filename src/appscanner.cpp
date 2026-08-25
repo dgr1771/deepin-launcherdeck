@@ -25,8 +25,25 @@ QVector<AppEntry> AppScanner::scan() const {
     return byFile.values().toVector();
 }
 
-bool AppScanner::parseDesktopFile(const QString &path, AppEntry &out) {
-    QFile f(path);
+// .desktop Categories → 花色归类（按优先级首个命中；win 版花色体系的 deepin 原生映射）
+static QString suitForCategories(const QString &cats)
+{
+    const QString c = QStringLiteral(";") + cats + QLatin1Char(';');
+    auto has = [&c](const char *k) { return c.contains(QLatin1String(k), Qt::CaseInsensitive); };
+    if (has(";WebBrowser;"))        return QStringLiteral("browser");       // ♥
+    if (has(";Network;"))           return QStringLiteral("network");       // ♦
+    if (has(";AudioVideo;") || has(";Game;")) return QStringLiteral("audiovideo");  // ♣
+    if (has(";Development;") || has(";IDE;") || has(";Building;"))
+                                    return QStringLiteral("development");    // ♠
+    if (has(";Utility;") || has(";Office;") || has(";TextEditor;"))
+                                    return QStringLiteral("utility");        // ⭐
+    if (has(";System;") || has(";Settings;") || has(";Security;") ||
+        has(";Core;") || has(";ConsoleOnly;"))
+                                    return QStringLiteral("system");        // ⚙
+    return QStringLiteral("other");                                          // ✦
+}
+
+bool AppScanner::parseDesktopFile(const QString &path, AppEntry &out) {    QFile f(path);
     if (!f.open(QIODevice::ReadOnly | QIODevice::Text)) return false;
 
     // 手工解析而不用 QSettings/IniFormat：QSettings 会把键名转小写，Name/Exec 就没了
@@ -62,5 +79,6 @@ bool AppScanner::parseDesktopFile(const QString &path, AppEntry &out) {
     out.icon = icon;
     out.desktopPath = path;
     out.categories = categories;
+    out.suit = suitForCategories(categories);
     return true;
 }
