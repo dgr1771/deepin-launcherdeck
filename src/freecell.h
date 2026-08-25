@@ -38,6 +38,8 @@ namespace FCLogic {
     int runSelfTest();                                  // DECK_SELFTEST=1 时跑逻辑断言，0/1 退出码
 }
 
+class QTimer;
+
 // 单控件自绘板：所有牌画在一个 widget 里（无子控件，命中测试按几何算）
 class FreeCellBoard : public QWidget {
     Q_OBJECT
@@ -46,7 +48,7 @@ public:
     QSize boardSize() const;                 // 建议尺寸（随牌面常量）
     void newGame(int dealNo);                // 纯牌局（自测用，无应用名）
     void newGame(int dealNo, const QStringList &appNames);  // 前 48 张按使用排名注入应用名（A=最常用）
-    void restore(const FCState &s);
+    void restore(const FCState &s);          // 恢复存档（不带发牌动画）
     const FCState &state() const { return m_s; }
 
 signals:
@@ -64,10 +66,15 @@ private:
     Hit hitTest(const QPoint &pos) const;
     QRect cardRect(int zone, int i, int idx) const;
     void drawCard(QPainter &p, const QRect &r, const FCard &c, bool selected) const;
+    void drawBack(QPainter &p, const QRect &r) const;   // 牌背（洗牌/发牌飞行期）
+    void startDealAnimation();                          // 中央堆三段抖洗 → 逐张发牌
 
     FCState m_s;
     int m_selZone = -1, m_selI = -1, m_selIdx = -1;   // 当前选中（-1 无）
     quint64 m_lastClickMs = 0;                         // 双击判定
     int m_lastClickZone = -1, m_lastClickI = -1, m_lastClickIdx = -1;
     int m_cw = 92, m_ch = 128;                         // 牌面尺寸（随板宽缩放）
+    QTimer *m_animTimer = nullptr;
+    qint64 m_animT0 = 0;                               // 动画起始时刻（ms）
+    bool m_animating = false;
 };

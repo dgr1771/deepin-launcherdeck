@@ -5,7 +5,9 @@
 #include <QMouseEvent>
 #include <QPainter>
 #include <QPainterPath>
+#include <QTimer>
 #include <algorithm>
+#include <cmath>
 #include <random>
 
 namespace FCLogic {
@@ -155,6 +157,46 @@ FreeCellBoard::FreeCellBoard(QWidget *parent) : QWidget(parent) {
     setMouseTracking(false);
 }
 
+// ---------------- 发牌动画：中央堆三段抖洗(~900ms) → 逐张飞出(18ms 错峰+160ms 飞行) ----------------
+static const int WASH_MS = 900, STAGGER_MS = 18, FLIGHT_MS = 160;
+
+void FreeCellBoard::startDealAnimation() {
+    m_animating = true;
+    m_animT0 = QDateTime::currentMSecsSinceEpoch();
+    if (!m_animTimer) {
+        m_animTimer = new QTimer(this);
+        m_animTimer->setInterval(33);
+        connect(m_animTimer, &QTimer::timeout, this, [this] {
+            if (!m_animating) { m_animTimer->stop(); return; }
+            const qint64 t = QDateTime::currentMSecsSinceEpoch() - m_animT0;
+            if (t > WASH_MS + 51 * STAGGER_MS + FLIGHT_MS + 80) {
+                m_animating = false;
+                m_animTimer->stop();
+                update();
+                return;
+            }
+            update();
+        });
+    }
+    m_animTimer->start();
+    update();
+}
+
+void FreeCellBoard::drawBack(QPainter &p, const QRect &r) const {
+    QPainterPath rr;
+    rr.addRoundedRect(QRectF(r), 8, 8);
+    QLinearGradient g(r.topLeft(), r.bottomRight());
+    g.setColorAt(0.0, QColor(35, 42, 69));
+    g.setColorAt(1.0, QColor(21, 26, 48));
+    p.fillPath(rr, g);
+    p.setRenderHint(QPainter::Antialiasing);
+    p.setPen(QPen(QColor(255, 215, 130, 120), 1.4));
+    p.drawPath(rr);
+    p.setFont(QFont(QStringLiteral("DejaVu Sans"), qMax<qreal>(9, r.height() / 6.0)));
+    p.setPen(QColor(255, 222, 150, 175));
+    p.drawText(r, Qt::AlignCenter, QString(QChar(0x2726)));   // ✦
+}
+
 QSize FreeCellBoard::boardSize() const {
     return QSize(CW * 8 + GAP * 7 + 8, COL_Y + STACK * 18 + CH + 8);
 }
@@ -185,6 +227,7 @@ void FreeCellBoard::newGame(int dealNo) {
         if (c.joker) { c.suit = 3; c.rank = 13; }
         m_s.cols[i % 8].append(c);
     }
+    startDealAnimation();
     update();
     emit stateChanged();
 }
@@ -242,7 +285,7 @@ FreeCellBoard::Hit FreeCellBoard::hitTest(const QPoint &pos) const {
 }
 
 void FreeCellBoard::mousePressEvent(QMouseEvent *e) {
-    if (m_s.won || e->button() != Qt::LeftButton) return;
+    if (m_animating || m_s.won || e->button() != Qt::LeftButton) return;
     const Hit h = hitTest(e->pos());
     const quint64 now = QDateTime::currentMSecsSinceEpoch();
     const bool dbl = (now - m_lastClickMs < 400) && h.zone == m_lastClickZone &&
@@ -282,7 +325,7 @@ void FreeCellBoard::mousePressEvent(QMouseEvent *e) {
 }
 
 void FreeCellBoard::mouseDoubleClickEvent(QMouseEvent *e) {
-    if (m_s.won || e->button() != Qt::LeftButton) return;
+    if (m_animating || m_s.won || e->button() != Qt::LeftButton) return;
     const Hit h = hitTest(e->pos());
     if (h.zone != 0 && h.zone != 1) return;
     FCard top;
@@ -366,11 +409,42 @@ void FreeCellBoard::paintEvent(QPaintEvent *) {
         }
     }
 
-    // 列牌
+    // 列牌（发牌动画期间：洗牌期在中央堆画牌背，飞行期从中央插值到落点，落地翻面）
+    const qint64 nowMs = QDateTime::currentMSecsSinceEpoch();
+    const qint64 t = m_animating ? nowMs - m_animT0 : INT64_MAX;
+    const QPointF pileCenter(width() / 2.0 - m_cw / 2.0, height() / 2.0 - m_ch / 2.0);
+    auto pilePos = [&](int k) {
+        // 三段抖洗：摆幅逐段衰减；堆叠小偏移营造厚度
+        qreal shake = 0.0;
+        if (t < WASH_MS) {
+            const int segMs = WASH_MS / 3;
+            const int seg = int(t) / segMs;
+            const qreal st = (t % segMs) / qreal(segMs);
+            shake = std::sin(st * M_PI * 3.0) * (11.0 - seg * 2.8);
+        }
+        return QPointF(pileCenter.x() + shake + (k % 7 - 3) * 0.8,
+                       pileCenter.y() - k * 0.35);
+    };
     for (int i = 0; i < 8; ++i) {
         const auto &col = m_s.cols[i];
         for (int idx = 0; idx < col.size(); ++idx) {
+            const int k = idx * 8 + i;                    // 发牌序（i%8 轮流发）
+            const qint64 flyAt = WASH_MS + qint64(k) * STAGGER_MS;
             const bool sel = (m_selZone == 0 && m_selI == i && idx >= m_selIdx);
+            if (t < flyAt + FLIGHT_MS) {
+                if (t < flyAt) {                          // 还在中央堆：牌背
+                    const QPointF pp = pilePos(k);
+                    drawBack(p, QRect(qRound(pp.x()), qRound(pp.y()), m_cw, m_ch));
+                } else {                                  // 飞行：牌背从堆插值到落点
+                    const QPointF pp = pilePos(0);
+                    const qreal pr = (t - flyAt) / qreal(FLIGHT_MS);
+                    const qreal e = 1.0 - std::pow(1.0 - pr, 3.0);   // easeOutCubic
+                    const QRect fin = cardRect(0, i, idx);
+                    drawBack(p, QRect(qRound(pp.x() + (fin.x() - pp.x()) * e),
+                                      qRound(pp.y() + (fin.y() - pp.y()) * e), m_cw, m_ch));
+                }
+                continue;
+            }
             drawCard(p, cardRect(0, i, idx), col[idx], sel);
         }
         if (col.isEmpty()) {
