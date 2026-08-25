@@ -18,8 +18,12 @@ protected:
     void leaveEvent(QEvent *e) override;
 
 private:
+    void drawTarotBack(QPainter &p);   // 牌背：星夜+金框+角饰+花色徽章
+    void drawFace(QPainter &p);        // 牌面：浅底+图标+名称+描述（悬停翻出）
     AppEntry m_app;
     QPixmap m_icon;
     QVariantAnimation *m_lift = nullptr;   // 0..1 浮起动画
+    QVariantAnimation *m_flip = nullptr;   // 0..1 翻面动画（牌背→牌面）
     qreal m_liftVal = 0.0;
+    qreal m_flipVal = 0.0;
 };
