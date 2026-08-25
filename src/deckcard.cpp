@@ -75,7 +75,7 @@ void DeckCard::paintEvent(QPaintEvent *) {
         p.drawPath(sh);
         p.setOpacity(0.8 * lift);
         p.setBrush(Qt::NoBrush);
-        p.setPen(QPen(QColor(255, 205, 105, 60), 4));
+        p.setPen(QPen(QColor(88, 101, 242, 60), 4));   // Blurple 外发光
         QPainterPath glow;
         glow.addRoundedRect(QRectF(1.5, 1.5, w - 3, h - 3), 11, 11);
         p.drawPath(glow);
@@ -101,14 +101,20 @@ void DeckCard::drawTarotBack(QPainter &p) {
 
     QPainterPath body;
     body.addRoundedRect(QRectF(0.5, 0.5, w - 1, h - 1), 10, 10);
-    // win 版玻璃系牌背：深青底 + 蒂芙尼→粉 150° 渐变（rgba(10,186,181,.55)→rgba(255,123,172,.42)）
-    p.fillPath(body, QColor(9, 34, 38));
-    QLinearGradient g(0, 0, w, h * 0.95);
+    // Discord Dark 牌背：#2B2D31→#1E1F22 渐变 + Blurple 顶光
+    p.fillPath(body, QColor(30, 31, 34));
+    QLinearGradient g(0, 0, w * 0.3, h);
     const qreal hl = m_liftVal;
-    g.setColorAt(0.0, QColor(10, 186, 181, 135 + 35 * hl));
-    g.setColorAt(1.0, QColor(255, 123, 172, 100 + 30 * hl));
+    g.setColorAt(0.0, QColor(43, 45, 49, 235));
+    g.setColorAt(1.0, QColor(30, 31, 34, 235));
     p.fillPath(body, g);
-    p.setPen(QPen(QColor(255, 255, 255, 55 + 70 * hl), 1));
+    {
+        QLinearGradient bp(0, 0, 0, h * 0.6);   // Blurple 微光（悬停增强）
+        bp.setColorAt(0.0, QColor(88, 101, 242, 28 + 50 * hl));
+        bp.setColorAt(1.0, QColor(88, 101, 242, 0));
+        p.fillPath(body, bp);
+    }
+    p.setPen(QPen(QColor(255, 255, 255, 38 + 60 * hl), 1));
     p.drawPath(body);
 
     // 星点纹理：按应用名哈希确定性布点
@@ -155,12 +161,12 @@ void DeckCard::drawTarotBack(QPainter &p) {
     nopt.setWrapMode(QTextOption::WordWrap);
     p.drawText(QRectF(8, h * 0.64, w - 16, h * 0.32), m_app.name, nopt);
 
-    // 内框 + 四角菱形饰（白系——win 玻璃背无金框，悬停提亮）
+    // 内框 + 四角菱形饰（悬停 Blurple 提亮）
     QPainterPath inner;
     inner.addRoundedRect(QRectF(inset, inset, w - 2 * inset, h - 2 * inset), 7, 7);
-    p.setPen(QPen(QColor(255, 255, 255, 85 + 115 * lift), 1.5));
+    p.setPen(QPen(QColor(255, 255, 255, 60 + 60 * lift), 1.2));
     p.drawPath(inner);
-    p.setPen(QPen(QColor(255, 255, 255, 120 + 110 * lift), 1.4));
+    p.setPen(QPen(QColor(88, 101, 242, 120 + 120 * lift), 1.4));
     const qreal d = 4.0;
     const QPointF corners[4] = {{inset + 7, inset + 7}, {w - inset - 7, inset + 7},
                                 {inset + 7, h - inset - 7}, {w - inset - 7, h - inset - 7}};
@@ -190,19 +196,19 @@ void DeckCard::drawFace(QPainter &p) {
     const qreal w = width(), h = height();
     const qreal inset = 5;
 
-    // 浅色羊皮纸面（与牌背强反差，翻转瞬间可感知）
+    // Discord 浅色牌面（#F2F3F5 系，与牌背强反差）
     QPainterPath body;
     body.addRoundedRect(QRectF(0.5, 0.5, w - 1, h - 1), 10, 10);
     QLinearGradient g(0, 0, 0, h);
-    g.setColorAt(0.0, QColor(249, 250, 252));
-    g.setColorAt(1.0, QColor(236, 240, 246));
+    g.setColorAt(0.0, QColor(242, 243, 245));
+    g.setColorAt(1.0, QColor(226, 229, 233));
     p.fillPath(body, g);
     p.setPen(QPen(QColor(148, 163, 184, 190), 1));
     p.drawPath(body);
-    // 内侧金线呼应牌背
+    // 内侧 Blurple 细线呼应
     QPainterPath inner;
     inner.addRoundedRect(QRectF(inset, inset, w - 2 * inset, h - 2 * inset), 7, 7);
-    p.setPen(QPen(QColor(196, 155, 60, 130), 1));
+    p.setPen(QPen(QColor(88, 101, 242, 110), 1));
     p.drawPath(inner);
 
     if (!m_icon.isNull()) {

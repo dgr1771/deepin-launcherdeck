@@ -188,15 +188,15 @@ void FreeCellBoard::drawBack(QPainter &p, const QRect &r) const {
     QPainterPath rr;
     rr.addRoundedRect(QRectF(r), 8, 8);
     QLinearGradient g(r.topLeft(), r.bottomRight());
-    g.setColorAt(0.0, QColor(35, 42, 69));
-    g.setColorAt(1.0, QColor(21, 26, 48));
+    g.setColorAt(0.0, QColor(43, 45, 49));              // #2B2D31
+    g.setColorAt(1.0, QColor(30, 31, 34));              // #1E1F22
     p.fillPath(rr, g);
     p.setRenderHint(QPainter::Antialiasing);
-    p.setPen(QPen(QColor(255, 215, 130, 120), 1.4));
+    p.setPen(QPen(QColor(88, 101, 242, 165), 1.4));     // Blurple 边
     p.drawPath(rr);
     p.setFont(QFont(QStringLiteral("DejaVu Sans"), qMax<qreal>(9, r.height() / 6.0)));
-    p.setPen(QColor(255, 222, 150, 175));
-    p.drawText(r, Qt::AlignCenter, QString(QChar(0x2726)));   // ✦
+    p.setPen(QColor(254, 231, 92, 200));                // Discord 黄 ✦
+    p.drawText(r, Qt::AlignCenter, QString(QChar(0x2726)));
 }
 
 QSize FreeCellBoard::boardSize() const {
@@ -365,11 +365,11 @@ void FreeCellBoard::drawCard(QPainter &p, const QRect &r, const FCard &c, bool s
     rr.addRoundedRect(r, 8, 8);
     // Joker：白底金边；普通：白底细边
     p.fillPath(rr, QColor(248, 250, 252));
-    p.setPen(QPen(selected ? QColor(255, 123, 172) : QColor(148, 163, 184), selected ? 3 : 1));   // 选中=win 玻璃粉
+    p.setPen(QPen(selected ? QColor(88, 101, 242) : QColor(148, 163, 184), selected ? 3 : 1));   // 选中=Discord Blurple
     p.drawPath(rr);
 
-    const QColor suitColor = c.joker ? QColor(180, 140, 20)
-                                     : (isRed(c) ? QColor(220, 38, 38) : QColor(30, 41, 59));
+    const QColor suitColor = c.joker ? QColor(254, 231, 92)                          // Discord 黄 #FEE75C
+                                     : (isRed(c) ? QColor(237, 66, 69) : QColor(219, 222, 225));  // #ED4245 / #DBDEE1
     const QString rankTxt = c.joker ? QStringLiteral("K")
         : (c.rank == 1 ? QStringLiteral("A") : c.rank == 11 ? QStringLiteral("J")
         : c.rank == 12 ? QStringLiteral("Q") : c.rank == 13 ? QStringLiteral("K")

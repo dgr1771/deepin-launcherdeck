@@ -129,8 +129,8 @@ void TarotPanel::buildUi() {
     // 牌意解读浮层（悬停 450ms 触发）
     m_reading = new QLabel(this);
     m_reading->setStyleSheet(QStringLiteral(
-        "QLabel { background: rgba(13, 17, 30, 0.97); border: 1px solid rgba(255, 215, 130, 0.5);"
-        "  border-radius: 10px; padding: 10px 12px; color: #e8ecf4; }"));
+        "QLabel { background: rgba(30, 31, 34, 0.97); border: 1px solid rgba(88, 101, 242, 0.55);"
+        "  border-radius: 10px; padding: 10px 12px; color: #dbdee1; }"));
     m_reading->setAttribute(Qt::WA_TransparentForMouseEvents, true);   // 不拦截 hover 防互闪
     m_reading->hide();
     m_readingTimer = new QTimer(this);
@@ -145,9 +145,9 @@ void TarotPanel::buildUi() {
     m_search->setPlaceholderText(QStringLiteral("兜底搜索（支持应用名）…"));
     m_search->setFixedHeight(32);
     m_search->setStyleSheet(
-        "QLineEdit { background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.14);"
+        "QLineEdit { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);"
         "  border-radius: 16px; padding: 0 14px; color: #fff; font-size: 13px; }"
-        "QLineEdit:focus { border-color: rgba(255,215,130,0.7); }");
+        "QLineEdit:focus { border-color: #5865F2; }");
     top->addWidget(m_search);
     connect(m_search, &QLineEdit::textChanged, this, [this](const QString &t) { rebuildGrid(t); });
 
@@ -233,11 +233,11 @@ void TarotPanel::rebuildChips() {
     for (const AppEntry &a : m_apps) cnt[suitOf(a)]++;
     const QString chipQss = QStringLiteral(
         "QPushButton { border-radius: 13px; padding: 4px 12px; font-size: 11.5px;"
-        "  color: rgba(255,255,255,0.78); background: rgba(255,255,255,0.06);"
-        "  border: 1px solid rgba(255,255,255,0.13); }"
-        "QPushButton:hover { background: rgba(255,255,255,0.12); }"
-        "QPushButton:checked { color: #ffb3cd; border-color: rgba(255,123,172,0.8);"   // win 玻璃粉强调
-        "  background: rgba(255,123,172,0.15); }");
+        "  color: rgba(255,255,255,0.78); background: rgba(255,255,255,0.05);"
+        "  border: 1px solid rgba(255,255,255,0.1); }"
+        "QPushButton:hover { background: rgba(255,255,255,0.09); }"
+        "QPushButton:checked { color: #fff; border-color: #5865F2;"   // Discord Blurple
+        "  background: rgba(88,101,242,0.28); }");
 
     auto addChip = [this, &cnt, &chipQss](const QString &id, const QString &label,
                                           bool custom, const QString &customId) {
@@ -763,20 +763,19 @@ void TarotPanel::toggle() {
 }
 
 void TarotPanel::paintEvent(QPaintEvent *) {
+    // Discord Dark 配色：深灰面板 + Blurple 氛围光（左上微光给面板纵深）
     QPainter p(this);
     p.setRenderHint(QPainter::Antialiasing);
     QPainterPath path;
     path.addRoundedRect(rect().adjusted(0, 0, -1, -1), 14, 14);
-    // win 版蒂芙尼玻璃配色：深色底漆（浅色壁纸可读性）+ 蒂芙尼→粉 160° 对角渐变 + 白高光边
-    p.fillPath(path, QColor(7, 13, 17, 235));
-    QLinearGradient g(0, 0, width(), height());
-    g.setColorAt(0.0, QColor(10, 186, 181, 88));    // 蒂芙尼 0.34
-    g.setColorAt(1.0, QColor(255, 123, 172, 58));   // 粉 0.22
-    p.fillPath(path, g);
-    p.setPen(QPen(QColor(255, 255, 255, 115), 1));  // 白边 0.45
+    p.fillPath(path, QColor(43, 45, 49, 242));          // #2B2D31
+    QRadialGradient amb(QPointF(width() * 0.18, height() * 0.06), width() * 0.75);
+    amb.setColorAt(0.0, QColor(88, 101, 242, 42));      // #5865F2 blurple 氛围
+    amb.setColorAt(1.0, QColor(88, 101, 242, 0));
+    p.fillPath(path, amb);
+    p.setPen(QPen(QColor(255, 255, 255, 22), 1));       // 发丝白边
     p.drawPath(path);
-    // 顶部内高光（win 版 inset 高光线的等效）
-    p.setPen(QPen(QColor(255, 255, 255, 76), 1));
+    p.setPen(QPen(QColor(255, 255, 255, 46), 1));       // 顶部内高光
     p.drawLine(QPointF(24, 1.5), QPointF(width() - 24.0, 1.5));
 }
 
