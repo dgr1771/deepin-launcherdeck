@@ -271,7 +271,7 @@ void TarotPanel::rebuildChips() {
 
     for (const SuitDef2 &d : BUILTIN_SUITS) {
         if (QLatin1String(d.id) == QLatin1String("all"))
-            addChip(QStringLiteral("all"), QStringLiteral("\xF0\x9F\x83\x8F 全部"), false, QString());
+            addChip(QStringLiteral("all"), QStringLiteral("🃏 全部"), false, QString());
         else
             addChip(QString::fromLatin1(d.id),
                     QStringLiteral("%1 %2").arg(QString::fromUtf8(d.badge), QString::fromUtf8(d.name)),
