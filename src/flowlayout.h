@@ -25,16 +25,33 @@ public:
 
 private:
     int doLayout(const QRect &rect, bool test = false) const {
-        int x = rect.x(), y = rect.y(), lineHeight = 0;
+        // 按行分组后逐行水平居中（对齐 win 版 justify-content:center——
+        // 左对齐时不满行的空隙全堆右侧，左右不对称）
+        struct Row { QList<QLayoutItem *> items; int width = 0; int height = 0; };
+        QList<Row> rows;
+        Row row;
+        const int avail = rect.width();
         for (QLayoutItem *it : m_items) {
             const QSize ws = it->sizeHint();
-            int nextX = x + ws.width() + m_h;
-            if (nextX - rect.right() > m_h && lineHeight > 0) { x = rect.x(); y += lineHeight + m_v; nextX = x + ws.width() + m_h; lineHeight = 0; }
-            if (!test) it->setGeometry(QRect(QPoint(x, y), ws));
-            x = nextX;
-            lineHeight = qMax(lineHeight, ws.height());
+            const int next = row.width + (row.items.isEmpty() ? 0 : m_h) + ws.width();
+            if (!row.items.isEmpty() && next > avail) { rows.append(row); row = Row(); }
+            row.width += (row.items.isEmpty() ? 0 : m_h) + ws.width();
+            row.height = qMax(row.height, ws.height());
+            row.items.append(it);
         }
-        return y + lineHeight - rect.y() + 4;
+        if (!row.items.isEmpty()) rows.append(row);
+
+        int y = rect.y();
+        for (const Row &r : rows) {
+            int rx = rect.x() + (avail - r.width) / 2;   // 行居中：左右留白对称
+            for (QLayoutItem *it : r.items) {
+                const QSize ws = it->sizeHint();
+                if (!test) it->setGeometry(QRect(QPoint(rx, y), ws));
+                rx += ws.width() + m_h;
+            }
+            y += r.height + m_v;
+        }
+        return y - rect.y() - m_v + 4;
     }
     QList<QLayoutItem *> m_items;
     int m_h, m_v;

@@ -1,3 +1,10 @@
+deepin-launcherdeck (0.5.1-1) unstable; urgency=medium
+
+  * 发牌动画：中央堆三段抖洗 + 逐张飞牌 + 落地翻面
+  * 牌阵行居中：修复不满行时空隙全堆右侧的左右不对称
+
+ -- dgr <dgr@dgr-PC>  Mon, 25 Aug 2026 14:40:00 +0800
+
 deepin-launcherdeck (0.4.0-1) unstable; urgency=medium
 
   * 塔罗牌阵启动模式：自适应缩放、花色归类、星夜牌面自绘
