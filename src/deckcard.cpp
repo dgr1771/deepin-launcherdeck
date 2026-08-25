@@ -101,12 +101,14 @@ void DeckCard::drawTarotBack(QPainter &p) {
 
     QPainterPath body;
     body.addRoundedRect(QRectF(0.5, 0.5, w - 1, h - 1), 10, 10);
-    QLinearGradient g(0, 0, w, h);
-    const qreal hl = 0.5 + 0.5 * lift;
-    g.setColorAt(0.0, QColor::fromRgbF(0.15 * (1 + 0.4 * hl), 0.18 * (1 + 0.4 * hl), 0.30 * (1 + 0.4 * hl)));
-    g.setColorAt(1.0, QColor::fromRgbF(0.075, 0.09, 0.175));
+    // win 版玻璃系牌背：深青底 + 蒂芙尼→粉 150° 渐变（rgba(10,186,181,.55)→rgba(255,123,172,.42)）
+    p.fillPath(body, QColor(9, 34, 38));
+    QLinearGradient g(0, 0, w, h * 0.95);
+    const qreal hl = m_liftVal;
+    g.setColorAt(0.0, QColor(10, 186, 181, 135 + 35 * hl));
+    g.setColorAt(1.0, QColor(255, 123, 172, 100 + 30 * hl));
     p.fillPath(body, g);
-    p.setPen(QPen(QColor(255, 255, 255, 45 + 70 * lift), 1));
+    p.setPen(QPen(QColor(255, 255, 255, 55 + 70 * hl), 1));
     p.drawPath(body);
 
     // 星点纹理：按应用名哈希确定性布点
@@ -153,12 +155,12 @@ void DeckCard::drawTarotBack(QPainter &p) {
     nopt.setWrapMode(QTextOption::WordWrap);
     p.drawText(QRectF(8, h * 0.64, w - 16, h * 0.32), m_app.name, nopt);
 
-    // 金线内框 + 四角菱形饰
+    // 内框 + 四角菱形饰（白系——win 玻璃背无金框，悬停提亮）
     QPainterPath inner;
     inner.addRoundedRect(QRectF(inset, inset, w - 2 * inset, h - 2 * inset), 7, 7);
-    p.setPen(QPen(QColor(255, 215, 130, 115 + 115 * lift), 1.5));
+    p.setPen(QPen(QColor(255, 255, 255, 85 + 115 * lift), 1.5));
     p.drawPath(inner);
-    p.setPen(QPen(QColor(255, 222, 150, 150 + 105 * lift), 1.4));
+    p.setPen(QPen(QColor(255, 255, 255, 120 + 110 * lift), 1.4));
     const qreal d = 4.0;
     const QPointF corners[4] = {{inset + 7, inset + 7}, {w - inset - 7, inset + 7},
                                 {inset + 7, h - inset - 7}, {w - inset - 7, h - inset - 7}};

@@ -236,8 +236,8 @@ void TarotPanel::rebuildChips() {
         "  color: rgba(255,255,255,0.78); background: rgba(255,255,255,0.06);"
         "  border: 1px solid rgba(255,255,255,0.13); }"
         "QPushButton:hover { background: rgba(255,255,255,0.12); }"
-        "QPushButton:checked { color: #ffd782; border-color: rgba(255,215,130,0.75);"
-        "  background: rgba(255,215,130,0.13); }");
+        "QPushButton:checked { color: #ffb3cd; border-color: rgba(255,123,172,0.8);"   // win 玻璃粉强调
+        "  background: rgba(255,123,172,0.15); }");
 
     auto addChip = [this, &cnt, &chipQss](const QString &id, const QString &label,
                                           bool custom, const QString &customId) {
@@ -753,6 +753,7 @@ void TarotPanel::launchApp(const AppEntry &a) {
 
 void TarotPanel::toggle() {
     if (isVisible()) { hide(); return; }
+    refresh();   // 唤起即重扫（win 版 onShown→loadApps 同款：新装应用即时入阵）
     QRect av = QGuiApplication::primaryScreen()->availableGeometry();
     move(av.center() - rect().center());
     show();
@@ -766,10 +767,17 @@ void TarotPanel::paintEvent(QPaintEvent *) {
     p.setRenderHint(QPainter::Antialiasing);
     QPainterPath path;
     path.addRoundedRect(rect().adjusted(0, 0, -1, -1), 14, 14);
-    // 深色亚克力底（浅色壁纸可读性——Windows 版 v0.1.1 的教训直接带过来）
-    p.fillPath(path, QColor(10, 14, 24, 235));
-    p.setPen(QPen(QColor(255, 255, 255, 90), 1));
+    // win 版蒂芙尼玻璃配色：深色底漆（浅色壁纸可读性）+ 蒂芙尼→粉 160° 对角渐变 + 白高光边
+    p.fillPath(path, QColor(7, 13, 17, 235));
+    QLinearGradient g(0, 0, width(), height());
+    g.setColorAt(0.0, QColor(10, 186, 181, 88));    // 蒂芙尼 0.34
+    g.setColorAt(1.0, QColor(255, 123, 172, 58));   // 粉 0.22
+    p.fillPath(path, g);
+    p.setPen(QPen(QColor(255, 255, 255, 115), 1));  // 白边 0.45
     p.drawPath(path);
+    // 顶部内高光（win 版 inset 高光线的等效）
+    p.setPen(QPen(QColor(255, 255, 255, 76), 1));
+    p.drawLine(QPointF(24, 1.5), QPointF(width() - 24.0, 1.5));
 }
 
 void TarotPanel::mousePressEvent(QMouseEvent *e) {

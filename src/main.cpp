@@ -70,6 +70,11 @@ int main(int argc, char *argv[]) {
     tray->setToolTip(QStringLiteral("应用牌堆 · Ctrl+J 唤起"));
     auto *menu = new QMenu();
     menu->addAction(QStringLiteral("展开牌堆（Ctrl+J）"), &panel, [this_ = &panel] { this_->toggle(); });
+    menu->addAction(QStringLiteral("重新扫描本机应用"), &panel, [this_ = &panel, tray_ = tray] {
+        this_->refresh();
+        tray_->showMessage(QStringLiteral("应用牌堆"), QStringLiteral("已重新扫描本机应用"),
+                            QSystemTrayIcon::Information, 1500);
+    });
     menu->addSeparator();
     menu->addAction(QStringLiteral("退出"), &app, &QApplication::quit);
     tray->setContextMenu(menu);

@@ -365,7 +365,7 @@ void FreeCellBoard::drawCard(QPainter &p, const QRect &r, const FCard &c, bool s
     rr.addRoundedRect(r, 8, 8);
     // Joker：白底金边；普通：白底细边
     p.fillPath(rr, QColor(248, 250, 252));
-    p.setPen(QPen(selected ? QColor(255, 200, 60) : QColor(148, 163, 184), selected ? 3 : 1));
+    p.setPen(QPen(selected ? QColor(255, 123, 172) : QColor(148, 163, 184), selected ? 3 : 1));   // 选中=win 玻璃粉
     p.drawPath(rr);
 
     const QColor suitColor = c.joker ? QColor(180, 140, 20)
