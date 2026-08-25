@@ -1,4 +1,5 @@
 #include "tarotpanel.h"
+#include "deckcard.h"
 #include "flowlayout.h"
 #include <algorithm>
 #include <QDesktopServices>
@@ -43,6 +44,14 @@ void TarotPanel::buildUi() {
     root->setContentsMargins(18, 14, 18, 12);
     root->setSpacing(8);
 
+    // 标题区（deepin 原生排版：主标题 + 状态行）
+    auto *title = new QLabel(QStringLiteral("✦ 应用牌堆"), this);
+    title->setStyleSheet("color: #ffffff; font-size: 19px; font-weight: 700; letter-spacing: 5px; background: transparent;");
+    m_subLbl = new QLabel(QStringLiteral("正在召集本机程序…"), this);
+    m_subLbl->setStyleSheet("color: rgba(255,255,255,0.5); font-size: 11px; letter-spacing: 1px; background: transparent;");
+    root->addWidget(title);
+    root->addWidget(m_subLbl);
+
     // 顶栏：模式切换 + 游戏控件 + 搜索
     auto *top = new QHBoxLayout();
     top->setSpacing(8);
@@ -84,6 +93,7 @@ void TarotPanel::buildUi() {
 
     m_scroll = new QScrollArea(this);
     m_scroll->setWidgetResizable(true);
+    m_scroll->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);   // 宽度即换行依据——不许横向滚
     m_scroll->setStyleSheet(
         "QScrollArea { background: transparent; border: none; }"
         "QScrollBar:vertical { background: transparent; width: 8px; }"
@@ -111,6 +121,19 @@ void TarotPanel::buildUi() {
     QRect av = QGuiApplication::primaryScreen()->availableGeometry();
     resize(qMin(1280, av.width() - 16), qMin(820, av.height() - 12));
     move(av.center() - rect().center());
+
+    // 尺寸变化 → 防抖重排（自适应牌面尺寸的核心触发器）
+    m_refitTimer = new QTimer(this);
+    m_refitTimer->setSingleShot(true);
+    m_refitTimer->setInterval(120);
+    connect(m_refitTimer, &QTimer::timeout, this, [this] {
+        if (!gameMode) rebuildGrid(m_search->text());
+    });
+}
+
+void TarotPanel::resizeEvent(QResizeEvent *e) {
+    QWidget::resizeEvent(e);
+    if (m_refitTimer) m_refitTimer->start();
 }
 
 void TarotPanel::refresh() {
@@ -121,6 +144,9 @@ void TarotPanel::refresh() {
         a.count = s->value(QStringLiteral("usage/") + a.name).toUInt();
     // 游戏模式不重建牌阵（FCard 存名字符串，重扫不破坏牌局；省一份隐藏网格的 CPU）
     if (!gameMode) rebuildGrid(m_search->text());
+    if (m_subLbl)
+        m_subLbl->setText(QStringLiteral("本机 %1 款程序入阵 · 常用自动浮前 · 零输入 — 点牌即达")
+                              .arg(m_apps.size()));
 }
 
 // ---------------- 模式切换 / 进度存取 ----------------
@@ -200,6 +226,7 @@ void TarotPanel::saveGame() {
     o[QStringLiteral("cells")] = cells;
     QSettings *st = usageStore();
     st->setValue(QStringLiteral("game"), QJsonDocument(o).toJson(QJsonDocument::Compact));
+    st->sync();   // 强制落盘：kill/崩溃时进度不丢（QSettings 平时异步写，实测 kill -9 丢档）
 }
 
 void TarotPanel::loadGame() {
@@ -257,40 +284,32 @@ void TarotPanel::rebuildGrid(const QString &filter) {
         return x.name.localeAwareCompare(y.name) < 0;
     });
 
-    const QString cardQss = QStringLiteral(
-        "QFrame#tcard { background: qlineargradient(x1:0,y1:0,x2:1,y2:1,"
-        "  stop:0 #232a45, stop:1 #171d33); border: 1px solid rgba(255,255,255,0.2);"
-        "  border-radius: 10px; }"
-        "QFrame#tcard:hover { border: 1px solid rgba(255,215,130,0.85);"
-        "  background: qlineargradient(x1:0,y1:0,x2:1,y2:1, stop:0 #2c3556, stop:1 #1e2540); }");
+    // 自适应牌面尺寸：在可用区找能整排放下全部牌的最大尺寸（全牌可见优先，不靠滚动）
+    const int availW = m_scroll->viewport()->width() - 12;
+    const int availH = m_scroll->viewport()->height() - 22;
+    QSize cs(102, 148);
+    {
+        const int GX = 13, GY = 14;
+        const double R = 102.0 / 148.0;
+        if (list.size() > 0 && availW > 200 && availH > 160) {
+            for (int hgt = 148; hgt >= 60; hgt -= 2) {
+                const int wdt = qRound(hgt * R);
+                const int perRow = (availW + GX) / (wdt + GX);
+                if (perRow <= 0) continue;
+                const int rows = (list.size() + perRow - 1) / perRow;
+                if (rows * hgt + (rows - 1) * GY + 18 <= availH) { cs = QSize(wdt, hgt); break; }
+            }
+        }
+    }
 
     for (const AppEntry &a : list) {
-        auto *card = new QFrame(m_gridBox);
-        card->setObjectName(QStringLiteral("tcard"));
-        card->setFixedSize(102, 148);
-        card->setStyleSheet(cardQss);
-        card->setCursor(Qt::PointingHandCursor);
-        card->setToolTip(a.comment.isEmpty() ? a.name : a.comment);
-        card->setProperty("deckPath", a.desktopPath);
-
-        auto *v = new QVBoxLayout(card);
-        v->setContentsMargins(8, 12, 8, 8);
-        v->setSpacing(6);
-        auto *iconLbl = new QLabel(card);
-        iconLbl->setAlignment(Qt::AlignCenter);
+        auto *card = new DeckCard(a, m_gridBox);
+        card->setFixedSize(cs);
         QIcon ic = a.icon.startsWith(QLatin1Char('/'))
                        ? QIcon(a.icon)
                        : QIcon::fromTheme(a.icon, QIcon::fromTheme(QStringLiteral("application-x-executable")));
-        iconLbl->setPixmap(ic.pixmap(52, 52));
-        v->addWidget(iconLbl);
-        auto *nameLbl = new QLabel(a.name, card);
-        nameLbl->setAlignment(Qt::AlignHCenter | Qt::AlignTop);
-        nameLbl->setWordWrap(true);
-        nameLbl->setStyleSheet("color: rgba(255,255,255,0.92); font-size: 11px; background: transparent; border: none;");
-        nameLbl->setFixedHeight(30);
-        v->addWidget(nameLbl);
-        v->addStretch();
-
+        if (ic.isNull()) ic = QIcon::fromTheme(QStringLiteral("application-x-executable"));
+        card->setIconPixmap(ic.pixmap(qMin<int>(cs.width() * 0.5, 72), qMin<int>(cs.width() * 0.5, 72)));
         card->installEventFilter(this);   // 点击 → 启动（eventFilter 统一接管）
         m_grid->addWidget(card);
     }
@@ -309,7 +328,7 @@ bool TarotPanel::eventFilter(QObject *obj, QEvent *e) {
     if (e->type() == QEvent::MouseButtonRelease) {
         auto *me = static_cast<QMouseEvent *>(e);
         if (me->button() == Qt::LeftButton) {
-            auto *card = qobject_cast<QFrame *>(obj);
+            auto *card = qobject_cast<QWidget *>(obj);
             if (card && card->rect().contains(me->pos())) {
                 const QString path = card->property("deckPath").toString();
                 for (const AppEntry &a : std::as_const(m_apps)) {

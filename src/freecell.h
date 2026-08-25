@@ -69,4 +69,5 @@ private:
     int m_selZone = -1, m_selI = -1, m_selIdx = -1;   // 当前选中（-1 无）
     quint64 m_lastClickMs = 0;                         // 双击判定
     int m_lastClickZone = -1, m_lastClickI = -1, m_lastClickIdx = -1;
+    int m_cw = 92, m_ch = 128;                         // 牌面尺寸（随板宽缩放）
 };

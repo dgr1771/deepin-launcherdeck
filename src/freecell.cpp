@@ -159,16 +159,16 @@ QSize FreeCellBoard::boardSize() const {
     return QSize(CW * 8 + GAP * 7 + 8, COL_Y + STACK * 18 + CH + 8);
 }
 
-static int colX(int i, int w) {
-    const int span = w - CW;
+static int colX(int i, int w, int cw) {
+    const int span = w - cw;
     return i * span / 7;
 }
 
 QRect FreeCellBoard::cardRect(int zone, int i, int idx) const {
     const int w = width();
-    if (zone == 1) return QRect(colX(i, w), TOP_Y, CW, CH);
-    if (zone == 2) return QRect(colX(i + 4, w), TOP_Y, CW, CH);
-    return QRect(colX(i, w), COL_Y + idx * STACK, CW, CH);
+    if (zone == 1) return QRect(colX(i, w, m_cw), TOP_Y, m_cw, m_ch);
+    if (zone == 2) return QRect(colX(i + 4, w, m_cw), TOP_Y, m_cw, m_ch);
+    return QRect(colX(i, w, m_cw), COL_Y + idx * STACK, m_cw, m_ch);
 }
 
 void FreeCellBoard::newGame(int dealNo) {
@@ -227,7 +227,7 @@ FreeCellBoard::Hit FreeCellBoard::hitTest(const QPoint &pos) const {
         if (cardRect(2, i, 0).contains(pos)) { h.zone = 2; h.i = i; return h; }
     if (pos.y() >= COL_Y - 20) {
         for (int i = 0; i < 8; ++i) {
-            const int x0 = colX(i, w), x1 = x0 + CW;
+            const int x0 = colX(i, w, m_cw), x1 = x0 + m_cw;
             if (pos.x() >= x0 - 6 && pos.x() <= x1 + 6) {
                 h.zone = 0; h.i = i;
                 const auto &col = m_s.cols[i];
@@ -322,17 +322,17 @@ void FreeCellBoard::drawCard(QPainter &p, const QRect &r, const FCard &c, bool s
         : c.rank == 12 ? QStringLiteral("Q") : c.rank == 13 ? QStringLiteral("K")
         : QString::number(c.rank));
 
-    // 角标：点数 + 花色
+    // 角标：点数 + 花色（字号随牌高缩放）
     p.setPen(suitColor);
-    p.setFont(QFont(QStringLiteral("DejaVu Sans"), 12, QFont::Bold));
+    p.setFont(QFont(QStringLiteral("DejaVu Sans"), qMax<qreal>(8, r.height() / 10.5), QFont::Bold));
     p.drawText(r.adjusted(6, 4, -4, 0), Qt::AlignLeft | Qt::AlignTop, rankTxt);
     p.drawText(r.adjusted(-4, 4, -6, 0), Qt::AlignRight | Qt::AlignTop, QString(suitChar(c.suit)));
 
     // 中央：大花色 + 应用名（有则两行小字）
-    p.setFont(QFont(QStringLiteral("DejaVu Sans"), 26));
+    p.setFont(QFont(QStringLiteral("DejaVu Sans"), qMax<qreal>(12, r.height() / 4.9)));
     p.drawText(r, Qt::AlignCenter, QString(suitChar(c.suit)));
     if (!c.appName.isEmpty()) {
-        p.setFont(QFont(QStringLiteral("DejaVu Sans"), 7));
+        p.setFont(QFont(QStringLiteral("DejaVu Sans"), qMax<qreal>(6, r.height() / 17)));
         p.setPen(QColor(71, 85, 105));
         QRect tr = r.adjusted(6, r.height() / 2, -6, -6);
         p.drawText(tr, Qt::AlignHCenter | Qt::AlignTop | Qt::TextWordWrap, c.appName);
@@ -397,6 +397,9 @@ void FreeCellBoard::paintEvent(QPaintEvent *) {
 
 void FreeCellBoard::resizeEvent(QResizeEvent *e) {
     QWidget::resizeEvent(e);
+    // 牌面随板宽缩放（8 列 + 7 间距），字号随牌高——窄面板不再挤压重叠
+    m_cw = qBound(56, (width() - GAP * 7 - 8) / 8, 110);
+    m_ch = qRound(m_cw * 128.0 / 92.0);
     update();
 }
 

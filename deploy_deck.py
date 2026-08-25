@@ -90,10 +90,12 @@ def build(c):
     print(out2.strip())
     return 0 if ok else 1
 
-def launch(c, debug=False):
+def launch(c, debug=False, show=False):
     print("后台启动 nohup ...")
     run(c, "killall -9 %s %s 2>/dev/null; sleep 1" % (BIN, BIN_TRUNC), timeout=10)
-    envs = "DECK_DEBUG_SHOW=1 DECK_DEBUG_GAME=1 " if debug else ""
+    envs = ""
+    if debug: envs += "DECK_DEBUG_SHOW=1 DECK_DEBUG_GAME=1 "
+    elif show: envs += "DECK_DEBUG_SHOW=1 "
     cmd = ("cd %s/build && export DISPLAY=%s; "
            "%s nohup ./%s >%s 2>&1 & echo PID=$!; sleep 2; "
            "ps -p $! >/dev/null && echo ALIVE || echo DEAD" % (REMOTE_ROOT, DISPLAY, envs, BIN, LOG))
@@ -142,11 +144,13 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("cmd", choices=["probe", "sync", "build", "launch", "shot", "status", "logs", "kill"])
     ap.add_argument("--debug", action="store_true", help="启动即显示面板并进游戏模式（联测）")
+    ap.add_argument("--show", action="store_true", help="启动即显示面板（塔罗模式联测）")
     a = ap.parse_args()
     print("连接 %s@%s ..." % (USER, HOST))
     c = conn()
     print("已连接\n")
-    {"probe": probe, "sync": sync, "build": build, "launch": lambda cc: launch(cc, a.debug), "shot": shot,
+    {"probe": probe, "sync": sync, "build": build,
+     "launch": lambda cc: launch(cc, a.debug, a.show), "shot": shot,
      "status": status, "logs": logs, "kill": kill}[a.cmd](c)
     c.close()
 

@@ -24,6 +24,7 @@ protected:
     bool eventFilter(QObject *obj, QEvent *e) override; // 牌的点击 → 启动
     void paintEvent(QPaintEvent *e) override; // 圆角毛玻璃底
     void mousePressEvent(QMouseEvent *e) override;
+    void resizeEvent(QResizeEvent *e) override;   // 尺寸变化 → 防抖重排牌阵
 
 private:
     void buildUi();
@@ -46,5 +47,7 @@ private:
     QPushButton *m_modeBtn = nullptr;
     QPushButton *m_newBtn = nullptr;
     QLabel *m_moveLbl = nullptr;
+    QLabel *m_subLbl = nullptr;
+    QTimer *m_refitTimer = nullptr;
     bool gameMode = false;
 };
