@@ -5,6 +5,7 @@
 #include <QPainter>
 #include <QPainterPath>
 #include <QSystemTrayIcon>
+#include <QTimer>
 #include <X11/X.h>
 
 #include "globalhotkey.h"
@@ -59,6 +60,8 @@ int main(int argc, char *argv[]) {
     // 联测钩子：DECK_DEBUG_SHOW=1 启动即显示面板；DECK_DEBUG_GAME=1 直接进游戏模式（免模拟点击）
     if (qEnvironmentVariableIsSet("DECK_DEBUG_SHOW")) panel.show();
     if (qEnvironmentVariableIsSet("DECK_DEBUG_GAME")) panel.toggleMode();
+    if (qEnvironmentVariableIsSet("DECK_DEBUG_FORTUNE"))   // 今日一抽弹层联测
+        QTimer::singleShot(400, &panel, [&panel] { panel.show(); panel.showFortune(); });
 
     // 托盘：左键/菜单展开
     auto *tray = new QSystemTrayIcon(drawTrayIcon(), &app);

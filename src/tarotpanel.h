@@ -19,6 +19,7 @@ public:
     explicit TarotPanel(QWidget *parent = nullptr);
     void toggle();     // 热键/托盘：显示↔收起
     void toggleMode(); // 塔罗牌阵 ↔ 空当接龙（公开：DECK_DEBUG_GAME 联测用）
+    void showFortune();  // 今日一抽（公开：DECK_DEBUG_FORTUNE 联测用）
     void refresh();    // 重扫应用 + 重建牌阵
 
 protected:
@@ -40,6 +41,13 @@ private:
     void updateGameChrome();
     void rebuildChips();     // 花色过滤行（按各花色实际数量生成，空花色隐藏）
     QStringList appNamesByUsage() const;   // 按使用排名的应用名（前 48 注入牌面）
+    QString suitOf(const AppEntry &a) const;          // 归属：自定义优先，否则 Categories 自动
+    QStringList customCats() const;                    // 自建类别 "id|名称|徽章"
+    void addCustomCat(const QString &name, const QChar &badge);
+    void removeCustomCat(const QString &id);
+    void showReading(const AppEntry &a, const QRect &cardRect);   // 牌意解读浮层
+    void hideReading();
+    void showCatMenu(const AppEntry &a, const QPoint &globalPos); // 右键归类菜单
 
     QVector<AppEntry> m_apps;
     QLineEdit *m_search = nullptr;
@@ -55,5 +63,10 @@ private:
     QHBoxLayout *m_chipsLayout = nullptr;
     QButtonGroup *m_chipGroup = nullptr;
     QString m_filterSuit = QStringLiteral("all");
+    QLabel *m_reading = nullptr;            // 牌意解读浮层
+    QTimer *m_readingTimer = nullptr;       // 悬停 450ms 延时
+    QString m_readingPath;                  // 待解读的应用 desktopPath
+    QRect m_readingCardRect;                // 触发悬停的牌矩形（浮层定位用）
+    QPushButton *m_fortuneBtn = nullptr;    // 今日一抽
     bool gameMode = false;
 };
