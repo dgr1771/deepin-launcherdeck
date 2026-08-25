@@ -37,6 +37,11 @@ static QIcon drawTrayIcon() {
 }
 
 int main(int argc, char *argv[]) {
+    // 逻辑自测模式：DECK_SELFTEST=1 ./deepin-launcherdeck → 断言结果进日志，0/1 退出码
+    if (qEnvironmentVariableIsSet("DECK_SELFTEST")) {
+        return FCLogic::runSelfTest();
+    }
+
     // DDE 25 可能默认 wayland：全局热键 XGrabKey 与牌阵置顶都依赖 X11（看板同款决策）
     qputenv("QT_QPA_PLATFORM", "xcb");
     qputenv("DSG_APP_ID", "org.dgr.launcherdeck");
@@ -51,6 +56,9 @@ int main(int argc, char *argv[]) {
     if (!app.setSingleInstance(QStringLiteral("deepin-launcherdeck"))) return 0;
 
     TarotPanel panel;
+    // 联测钩子：DECK_DEBUG_SHOW=1 启动即显示面板；DECK_DEBUG_GAME=1 直接进游戏模式（免模拟点击）
+    if (qEnvironmentVariableIsSet("DECK_DEBUG_SHOW")) panel.show();
+    if (qEnvironmentVariableIsSet("DECK_DEBUG_GAME")) panel.toggleMode();
 
     // 托盘：左键/菜单展开
     auto *tray = new QSystemTrayIcon(drawTrayIcon(), &app);

@@ -6,13 +6,18 @@
 #include <QFile>
 #include <QFrame>
 #include <QGuiApplication>
+#include <QHBoxLayout>
 #include <QIcon>
+#include <QJsonArray>
+#include <QJsonDocument>
+#include <QJsonObject>
 #include <QLabel>
 #include <QLineEdit>
 #include <QMouseEvent>
 #include <QProcess>
 #include <QPainter>
 #include <QPainterPath>
+#include <QPushButton>
 #include <QScrollArea>
 #include <QSettings>
 #include <QTimer>
@@ -38,6 +43,35 @@ void TarotPanel::buildUi() {
     root->setContentsMargins(18, 14, 18, 12);
     root->setSpacing(8);
 
+    // 顶栏：模式切换 + 游戏控件 + 搜索
+    auto *top = new QHBoxLayout();
+    top->setSpacing(8);
+    m_modeBtn = new QPushButton(QStringLiteral("🎮 空当接龙"), this);
+    m_modeBtn->setCursor(Qt::PointingHandCursor);
+    m_newBtn = new QPushButton(QStringLiteral("🆕 新局"), this);
+    m_newBtn->setCursor(Qt::PointingHandCursor);
+    m_newBtn->hide();
+    m_moveLbl = new QLabel(this);
+    m_moveLbl->setStyleSheet("color: rgba(255,255,255,0.65); font-size: 12px;");
+    m_moveLbl->hide();
+    const QString btnQss = QStringLiteral(
+        "QPushButton { background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.16);"
+        "  border-radius: 14px; padding: 5px 14px; color: #fff; font-size: 12px; }"
+        "QPushButton:hover { background: rgba(255,255,255,0.16); }");
+    m_modeBtn->setStyleSheet(btnQss);
+    m_newBtn->setStyleSheet(btnQss);
+    top->addWidget(m_modeBtn);
+    top->addWidget(m_newBtn);
+    top->addWidget(m_moveLbl);
+    top->addStretch();
+    connect(m_modeBtn, &QPushButton::clicked, this, [this] { toggleMode(); });
+    connect(m_newBtn, &QPushButton::clicked, this, [this] {
+        m_board->newGame(FCLogic::randomDealNo(), appNamesByUsage());
+        saveGame();
+        updateGameChrome();
+    });
+    root->addLayout(top);
+
     m_search = new QLineEdit(this);
     m_search->setPlaceholderText(QStringLiteral("兜底搜索（支持应用名）…"));
     m_search->setFixedHeight(32);
@@ -45,7 +79,7 @@ void TarotPanel::buildUi() {
         "QLineEdit { background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.14);"
         "  border-radius: 16px; padding: 0 14px; color: #fff; font-size: 13px; }"
         "QLineEdit:focus { border-color: rgba(255,215,130,0.7); }");
-    root->addWidget(m_search);
+    top->addWidget(m_search);
     connect(m_search, &QLineEdit::textChanged, this, [this](const QString &t) { rebuildGrid(t); });
 
     m_scroll = new QScrollArea(this);
@@ -61,6 +95,18 @@ void TarotPanel::buildUi() {
     m_scroll->setWidget(m_gridBox);
     root->addWidget(m_scroll);
 
+    // 空当接龙板（初始隐藏）
+    m_board = new FreeCellBoard(this);
+    m_board->hide();
+    root->addWidget(m_board, 1);
+    connect(m_board, &FreeCellBoard::stateChanged, this, [this] {
+        saveGame();
+        updateGameChrome();
+    });
+    connect(m_board, &FreeCellBoard::wonSignal, this, [this](int, int) {
+        clearSavedGame();   // 通关清档，下次进游戏模式开新局
+    });
+
     // 小屏/高缩放夹紧（Windows 版同款教训：写死 820 在 150% 缩放会裁底）
     QRect av = QGuiApplication::primaryScreen()->availableGeometry();
     resize(qMin(1280, av.width() - 16), qMin(820, av.height() - 12));
@@ -73,7 +119,123 @@ void TarotPanel::refresh() {
     QSettings *s = usageStore();
     for (AppEntry &a : m_apps)
         a.count = s->value(QStringLiteral("usage/") + a.name).toUInt();
-    rebuildGrid(m_search->text());
+    // 游戏模式不重建牌阵（FCard 存名字符串，重扫不破坏牌局；省一份隐藏网格的 CPU）
+    if (!gameMode) rebuildGrid(m_search->text());
+}
+
+// ---------------- 模式切换 / 进度存取 ----------------
+
+QStringList TarotPanel::appNamesByUsage() const {
+    QVector<AppEntry> list = m_apps;
+    std::sort(list.begin(), list.end(), [](const AppEntry &x, const AppEntry &y) {
+        if (x.count != y.count) return x.count > y.count;
+        return x.name.localeAwareCompare(y.name) < 0;
+    });
+    QStringList names;
+    for (const AppEntry &a : list) names.append(a.name);
+    return names;
+}
+
+void TarotPanel::toggleMode() {
+    gameMode = !gameMode;
+    if (gameMode) {
+        ensureGame();
+        enterGameUi();
+    } else {
+        m_board->hide();
+        m_scroll->show();
+        m_search->show();
+        rebuildGrid(m_search->text());
+    }
+    updateGameChrome();
+}
+
+void TarotPanel::enterGameUi() {
+    m_scroll->hide();
+    m_search->hide();
+    m_board->show();
+    m_board->setFocus();
+}
+
+void TarotPanel::ensureGame() {
+    loadGame();
+    if (m_board->state().dealNo == 0) {
+        m_board->newGame(FCLogic::randomDealNo(), appNamesByUsage());
+        saveGame();
+    }
+    updateGameChrome();
+}
+
+void TarotPanel::updateGameChrome() {
+    m_modeBtn->setText(gameMode ? QStringLiteral("🃏 塔罗牌阵") : QStringLiteral("🎮 空当接龙"));
+    m_newBtn->setVisible(gameMode);
+    m_moveLbl->setVisible(gameMode);
+    if (gameMode) {
+        const FCState &s = m_board->state();
+        m_moveLbl->setText(QStringLiteral("第 %1 局 · %2 步").arg(s.dealNo).arg(s.moves));
+    }
+}
+
+void TarotPanel::saveGame() {
+    const FCState &s = m_board->state();
+    if (s.dealNo == 0) return;
+    QJsonObject o;
+    o[QStringLiteral("deal")] = s.dealNo;
+    o[QStringLiteral("moves")] = s.moves;
+    o[QStringLiteral("won")] = s.won;
+    QJsonArray found;
+    for (int i = 0; i < 4; ++i) found.append(s.found[i]);
+    o[QStringLiteral("found")] = found;
+    QJsonArray cols;
+    for (const auto &col : s.cols) {
+        QJsonArray jc;
+        for (const FCard &c : col)
+            jc.append(QJsonObject{{"s", c.suit}, {"r", c.rank}, {"n", c.appName}, {"j", c.joker}});
+        cols.append(jc);
+    }
+    o[QStringLiteral("cols")] = cols;
+    QJsonArray cells;
+    for (const FCard &c : s.cells)
+        cells.append(c.rank == 0 ? QJsonObject() : QJsonObject{{"s", c.suit}, {"r", c.rank}, {"n", c.appName}, {"j", c.joker}});
+    o[QStringLiteral("cells")] = cells;
+    QSettings *st = usageStore();
+    st->setValue(QStringLiteral("game"), QJsonDocument(o).toJson(QJsonDocument::Compact));
+}
+
+void TarotPanel::loadGame() {
+    QSettings *st = usageStore();
+    const QByteArray raw = st->value(QStringLiteral("game")).toByteArray();
+    if (raw.isEmpty()) return;
+    QJsonObject o = QJsonDocument::fromJson(raw).object();
+    if (o.value(QStringLiteral("deal")).toInt() <= 0) return;
+    FCState s;
+    s.dealNo = o.value(QStringLiteral("deal")).toInt();
+    s.moves = o.value(QStringLiteral("moves")).toInt();
+    s.won = o.value(QStringLiteral("won")).toBool();
+    const QJsonArray found = o.value(QStringLiteral("found")).toArray();
+    for (int i = 0; i < 4 && i < found.size(); ++i) s.found[i] = found[i].toInt();
+    const QJsonArray cols = o.value(QStringLiteral("cols")).toArray();
+    for (int i = 0; i < 8 && i < cols.size(); ++i) {
+        s.cols[i].clear();
+        for (const auto &v : cols[i].toArray()) {
+            const QJsonObject c = v.toObject();
+            s.cols[i].append(FCard{c.value("s").toInt(), c.value("r").toInt(),
+                                   c.value("n").toString(), c.value("j").toBool()});
+        }
+    }
+    const QJsonArray cells = o.value(QStringLiteral("cells")).toArray();
+    for (int i = 0; i < 4 && i < cells.size(); ++i) {
+        const QJsonObject c = cells[i].toObject();
+        s.cells[i] = c.isEmpty() ? FCard()
+                                 : FCard{c.value("s").toInt(), c.value("r").toInt(),
+                                         c.value("n").toString(), c.value("j").toBool()};
+    }
+    if (s.won) return;   // 通关档不恢复
+    m_board->restore(s);
+}
+
+void TarotPanel::clearSavedGame() {
+    usageStore()->remove(QStringLiteral("game"));
 }
 
 void TarotPanel::rebuildGrid(const QString &filter) {

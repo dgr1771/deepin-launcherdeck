@@ -15,6 +15,7 @@ pkg_check_modules(XCB REQUIRED IMPORTED_TARGET xcb)   # 全局热键的独立 xc
 add_executable(deepin-launcherdeck
     src/main.cpp
     src/appscanner.cpp
+    src/freecell.cpp
     src/globalhotkey.cpp
     src/tarotpanel.cpp
 )
