@@ -1,3 +1,12 @@
+deepin-launcherdeck (0.9.0-1) unstable; urgency=medium
+
+  * 合流 codex 分支：老虎机五轴游戏（金币/头奖/每小时限玩）
+  * 外观设置弹窗：5 套预设 + 透明度滑条 + 接龙牌背主题
+  * 接龙快速模式（初级/中级/经典）；发牌动画升级（交替甩动+残影）
+  * Discord Blurple 收编为第 5 套预设
+
+ -- dgr <dgr@dgr-PC>  Thu, 27 Aug 2026 13:45:00 +0800
+
 deepin-launcherdeck (0.5.1-1) unstable; urgency=medium
 
   * 发牌动画：中央堆三段抖洗 + 逐张飞牌 + 落地翻面
