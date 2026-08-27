@@ -157,10 +157,15 @@ FreeCellBoard::FreeCellBoard(QWidget *parent) : QWidget(parent) {
     setMouseTracking(false);
 }
 
+void FreeCellBoard::setBackTheme(int theme) {
+    m_backTheme = qBound(0, theme, 4);
+    update();
+}
+
 // ---------------- 发牌动画（win 版逐帧参数复刻）----------------
-// 洗牌：每张牌独立 左甩→右甩→归中（900ms，逐张 6ms 错峰、随机旋转、0.55 缩放、淡入）
+// 洗牌：每张牌独立左右交替甩动（更大的位移、旋转、缩放脉冲与残影）
 // 发牌：1300ms 后从顶部牌堆逐张飞出（18ms 错峰 + 160ms easeOutCubic + 0.55→1 放大），落地翻面
-static const int WASH_DUR = 900, WASH_STAG = 6, DEAL_T0 = 1300, STAGGER_MS = 18, FLIGHT_MS = 160;
+static const int WASH_DUR = 1250, WASH_STAG = 10, DEAL_T0 = 1550, STAGGER_MS = 18, FLIGHT_MS = 180;
 
 void FreeCellBoard::startDealAnimation() {
     m_animating = true;
@@ -188,15 +193,34 @@ void FreeCellBoard::drawBack(QPainter &p, const QRect &r) const {
     QPainterPath rr;
     rr.addRoundedRect(QRectF(r), 8, 8);
     QLinearGradient g(r.topLeft(), r.bottomRight());
-    g.setColorAt(0.0, QColor(43, 45, 49));              // #2B2D31
-    g.setColorAt(1.0, QColor(30, 31, 34));              // #1E1F22
+    const QColor top[] = {QColor(31, 40, 76), QColor(19, 31, 64), QColor(91, 58, 40), QColor(232, 238, 252), QColor(43, 45, 49)};
+    const QColor mid[] = {QColor(48, 54, 102), QColor(30, 48, 92), QColor(142, 91, 49), QColor(210, 222, 244), QColor(35, 36, 40)};
+    const QColor bot[] = {QColor(18, 24, 48), QColor(10, 17, 39), QColor(58, 35, 31), QColor(177, 193, 224), QColor(30, 31, 34)};
+    const QColor edge[] = {QColor(139, 124, 246, 220), QColor(96, 165, 250, 225), QColor(245, 190, 92, 230), QColor(100, 116, 139, 220), QColor(88, 101, 242, 225)};
+    const QColor innerColor[] = {QColor(165, 180, 252, 125), QColor(125, 211, 252, 140), QColor(255, 224, 158, 145), QColor(255, 255, 255, 150), QColor(88, 101, 242, 120)};
+    const QColor bright[] = {QColor(224, 231, 255, 210), QColor(191, 219, 254, 220), QColor(255, 238, 190, 230), QColor(51, 65, 85, 210), QColor(254, 231, 92, 220)};
+    const QColor emblem[] = {QColor(196, 181, 253, 230), QColor(125, 211, 252, 235), QColor(255, 207, 112, 235), QColor(71, 85, 105, 220), QColor(88, 101, 242, 235)};
+    const int t = qBound(0, m_backTheme, 4);
+    g.setColorAt(0.0, top[t]);
+    g.setColorAt(0.52, mid[t]);
+    g.setColorAt(1.0, bot[t]);
     p.fillPath(rr, g);
     p.setRenderHint(QPainter::Antialiasing);
-    p.setPen(QPen(QColor(88, 101, 242, 165), 1.4));     // Blurple 边
+    p.setPen(QPen(edge[t], 1.6));
     p.drawPath(rr);
-    p.setFont(QFont(QStringLiteral("DejaVu Sans"), qMax<qreal>(9, r.height() / 6.0)));
-    p.setPen(QColor(254, 231, 92, 200));                // Discord 黄 ✦
+    QPainterPath inner;
+    inner.addRoundedRect(QRectF(r).adjusted(5, 5, -5, -5), 5, 5);
+    p.setPen(QPen(innerColor[t], 1));
+    p.drawPath(inner);
+    p.setPen(bright[t]);
+    p.setFont(QFont(QStringLiteral("DejaVu Sans"), qMax<qreal>(8, r.height() / 8.8), QFont::Bold));
+    p.drawText(r.adjusted(0, 0, 0, -r.height() / 3), Qt::AlignCenter, QStringLiteral("FREECELL"));
+    p.setPen(emblem[t]);
+    p.setFont(QFont(QStringLiteral("DejaVu Sans"), qMax<qreal>(18, r.height() / 3.5)));
     p.drawText(r, Qt::AlignCenter, QString(QChar(0x2726)));
+    p.setPen(QColor(165, 180, 252, 160));
+    p.setFont(QFont(QStringLiteral("DejaVu Sans"), qMax<qreal>(8, r.height() / 10.0)));
+    p.drawText(r.adjusted(0, r.height() / 3, 0, 0), Qt::AlignCenter, QStringLiteral("A  ♠  K"));
 }
 
 QSize FreeCellBoard::boardSize() const {
@@ -226,7 +250,7 @@ void FreeCellBoard::newGame(int dealNo) {
         c.suit = msIdx % 4;
         c.rank = msIdx / 4 + 1;
         c.joker = (msIdx >= 48);
-        if (c.joker) { c.suit = 3; c.rank = 13; }
+        if (c.joker) { c.suit = msIdx - 48; c.rank = 13; }
         m_s.cols[i % 8].append(c);
     }
     // 洗牌随机旋转按局号做种（重绘不抖动，同局观感一致）
@@ -243,6 +267,44 @@ void FreeCellBoard::newGame(int dealNo) {
 }
 
 void FreeCellBoard::newGame(int dealNo, const QStringList &appNames) {
+    newGame(dealNo, appNames, 1);
+}
+
+void FreeCellBoard::newGame(int dealNo, const QStringList &appNames, int difficulty) {
+    if (difficulty == 0) {
+        m_s = FCState();
+        m_s.dealNo = dealNo;
+        m_selZone = -1;
+        // 初级练习局：四列分别按 K→A 整齐排列，剩余四列留空，几分钟即可完成。
+        for (int suit = 0; suit < 4; ++suit) {
+            for (int rank = 13; rank >= 1; --rank) {
+                FCard c;
+                c.suit = suit;
+                c.rank = rank;
+                c.appName = (rank <= 12 && (rank - 1) * 4 + suit < appNames.size())
+                    ? appNames[(rank - 1) * 4 + suit] : QString();
+                m_s.cols[suit].append(c);
+            }
+        }
+        if (difficulty == 1) {
+            // 中级：把每种花色的 A、2 拆到另外四列，增加少量整理但仍保持快速可解。
+            for (int suit = 0; suit < 4; ++suit) {
+                const FCard ace = m_s.cols[suit].takeLast();
+                const FCard two = m_s.cols[suit].takeLast();
+                m_s.cols[4 + suit].append(two);
+                m_s.cols[4 + suit].append(ace);
+            }
+        }
+        std::mt19937 rng((quint32)dealNo);
+        std::uniform_real_distribution<qreal> rot(6.0, 14.0);
+        m_washRotL.resize(52);
+        m_washRotR.resize(52);
+        for (int k = 0; k < 52; ++k) { m_washRotL[k] = -rot(rng); m_washRotR[k] = rot(rng); }
+        startDealAnimation();
+        update();
+        emit stateChanged();
+        return;
+    }
     newGame(dealNo);
     // 应用名注入：msIdx<48 的牌按 k/4+1=排名（A=最常用 4 个）、k%4=花色；发牌序 msIdx→牌面
     const QVector<int> order = msShuffle(dealNo);
@@ -363,13 +425,19 @@ void FreeCellBoard::drawCard(QPainter &p, const QRect &r, const FCard &c, bool s
     p.setRenderHint(QPainter::Antialiasing);
     QPainterPath rr;
     rr.addRoundedRect(r, 8, 8);
-    // Joker：白底金边；普通：白底细边
-    p.fillPath(rr, QColor(248, 250, 252));
-    p.setPen(QPen(selected ? QColor(88, 101, 242) : QColor(148, 163, 184), selected ? 3 : 1));   // 选中=Discord Blurple
+    QLinearGradient face(r.topLeft(), r.bottomRight());
+    face.setColorAt(0.0, QColor(250, 251, 255));
+    face.setColorAt(1.0, QColor(220, 228, 247));
+    p.fillPath(rr, face);
+    p.setPen(QPen(selected ? QColor(139, 124, 246) : QColor(148, 163, 201), selected ? 3 : 1.2));
     p.drawPath(rr);
+    QPainterPath hi;
+    hi.addRoundedRect(QRectF(r).adjusted(3, 3, -3, -3), 6, 6);
+    p.setPen(QPen(selected ? QColor(196, 181, 253, 210) : QColor(255, 255, 255, 160), 1));
+    p.drawPath(hi);
 
-    const QColor suitColor = c.joker ? QColor(254, 231, 92)                          // Discord 黄 #FEE75C
-                                     : (isRed(c) ? QColor(237, 66, 69) : QColor(219, 222, 225));  // #ED4245 / #DBDEE1
+    const QColor suitColor = c.joker ? QColor(124, 92, 220)
+                                     : (isRed(c) ? QColor(218, 76, 112) : QColor(38, 58, 91));
     const QString rankTxt = c.joker ? QStringLiteral("K")
         : (c.rank == 1 ? QStringLiteral("A") : c.rank == 11 ? QStringLiteral("J")
         : c.rank == 12 ? QStringLiteral("Q") : c.rank == 13 ? QStringLiteral("K")
@@ -382,11 +450,15 @@ void FreeCellBoard::drawCard(QPainter &p, const QRect &r, const FCard &c, bool s
     p.drawText(r.adjusted(-4, 4, -6, 0), Qt::AlignRight | Qt::AlignTop, QString(suitChar(c.suit)));
 
     // 中央：大花色 + 应用名（有则两行小字）
+    p.setPen(QColor(suitColor.red(), suitColor.green(), suitColor.blue(), 24));
+    p.setFont(QFont(QStringLiteral("DejaVu Sans"), qMax<qreal>(22, r.height() / 3.5)));
+    p.drawText(r.adjusted(1, 1, 1, 1), Qt::AlignCenter, QString(suitChar(c.suit)));
+    p.setPen(suitColor);
     p.setFont(QFont(QStringLiteral("DejaVu Sans"), qMax<qreal>(12, r.height() / 4.9)));
     p.drawText(r, Qt::AlignCenter, QString(suitChar(c.suit)));
     if (!c.appName.isEmpty()) {
         p.setFont(QFont(QStringLiteral("DejaVu Sans"), qMax<qreal>(6, r.height() / 17)));
-        p.setPen(QColor(71, 85, 105));
+        p.setPen(QColor(36, 50, 79));
         QRect tr = r.adjusted(6, r.height() / 2, -6, -6);
         p.drawText(tr, Qt::AlignHCenter | Qt::AlignTop | Qt::TextWordWrap, c.appName);
     }
@@ -419,30 +491,33 @@ void FreeCellBoard::paintEvent(QPaintEvent *) {
         }
     }
 
-    // 列牌（win 版洗牌逐帧复刻：顶部小牌堆 0.55 缩放，每张独立 左甩→右甩→归中
-    // 900ms + 6ms 错峰 + 随机旋转 ±6-14° + 淡入；1300ms 后逐张飞出放大落位翻面）
+    // 列牌：顶部牌堆左右交替甩动，加入弧线、缩放脉冲和两帧残影；随后飞出落位。
     const qint64 nowMs = QDateTime::currentMSecsSinceEpoch();
     const qint64 t = m_animating ? nowMs - m_animT0 : INT64_MAX;
     const QPointF pileC(width() / 2.0, TOP_Y + m_ch * 0.55 / 2.0);   // 顶部发牌位（缩放牌堆的中心）
-    auto washPose = [&](int k, qreal &px, qreal &py, qreal &rot, qreal &alpha) {
-        px = pileC.x(); py = pileC.y(); rot = 0.0; alpha = 1.0;
-        const qint64 at = t - qint64(k) * WASH_STAG;
+    auto washPose = [&](int k, qint64 sampleAt, qreal &px, qreal &py, qreal &rot, qreal &alpha, qreal &scale) {
+        px = pileC.x(); py = pileC.y(); rot = 0.0; alpha = 1.0; scale = 0.55;
+        const qint64 at = sampleAt - qint64(k) * WASH_STAG;
         if (at < 0) { alpha = 0.0; return; }
         alpha = qMin<qreal>(1.0, at / 140.0);   // 快速淡入
         const qreal pr = qMin<qreal>(1.0, at / qreal(WASH_DUR));
         auto lerp = [](qreal a, qreal b, qreal u) { return a + (b - a) * u; };
+        const qreal dir = (k % 2 == 0) ? -1.0 : 1.0;
+        const qreal firstRot = (k % 2 == 0) ? m_washRotL[k] : m_washRotR[k];
+        const qreal secondRot = (k % 2 == 0) ? m_washRotR[k] : m_washRotL[k];
+        scale = 0.55 + 0.10 * qSin(pr * M_PI);
         if (pr < 0.32) {
             const qreal u = pr / 0.32;
-            px = lerp(pileC.x(), pileC.x() - 60, u); py = lerp(pileC.y(), pileC.y() + 8, u);
-            rot = lerp(0.0, m_washRotL[k], u);
+            px = lerp(pileC.x(), pileC.x() + dir * 84, u); py = lerp(pileC.y(), pileC.y() + 16, u);
+            rot = lerp(0.0, firstRot, u);
         } else if (pr < 0.68) {
             const qreal u = (pr - 0.32) / 0.36;
-            px = lerp(pileC.x() - 60, pileC.x() + 60, u); py = lerp(pileC.y() + 8, pileC.y() + 4, u);
-            rot = lerp(m_washRotL[k], m_washRotR[k], u);
+            px = lerp(pileC.x() + dir * 84, pileC.x() - dir * 84, u); py = pileC.y() + 16 - qSin(u * M_PI) * 30;
+            rot = lerp(firstRot, secondRot, u);
         } else {
             const qreal u = (pr - 0.68) / 0.32;
-            px = lerp(pileC.x() + 60, pileC.x(), u); py = lerp(pileC.y() + 4, pileC.y(), u);
-            rot = lerp(m_washRotR[k], 0.0, u);
+            px = lerp(pileC.x() - dir * 84, pileC.x(), u); py = lerp(pileC.y() + 16, pileC.y(), u);
+            rot = lerp(secondRot, 0.0, u);
         }
     };
     for (int i = 0; i < 8; ++i) {
@@ -453,14 +528,26 @@ void FreeCellBoard::paintEvent(QPaintEvent *) {
             const bool sel = (m_selZone == 0 && m_selI == i && idx >= m_selIdx);
             if (t < flyAt + FLIGHT_MS) {
                 if (t < flyAt) {                          // 洗牌期：顶部小牌堆甩动
-                    qreal px, py, rot, alpha;
-                    washPose(k, px, py, rot, alpha);
+                    qreal px, py, rot, alpha, scale;
+                    washPose(k, t, px, py, rot, alpha, scale);
                     if (alpha > 0.01) {
+                        for (int trail = 2; trail >= 1; --trail) {
+                            qreal tx, ty, trot, talpha, tscale;
+                            washPose(k, t - trail * 90, tx, ty, trot, talpha, tscale);
+                            if (talpha < 0.01) continue;
+                            p.save();
+                            p.setOpacity(talpha * (trail == 1 ? 0.12 : 0.055));
+                            p.translate(tx, ty);
+                            p.rotate(trot);
+                            p.scale(tscale, tscale);
+                            drawBack(p, QRect(-m_cw / 2, -m_ch / 2, m_cw, m_ch));
+                            p.restore();
+                        }
                         p.save();
                         p.setOpacity(alpha);
                         p.translate(px, py);
                         p.rotate(rot);
-                        p.scale(0.55, 0.55);
+                        p.scale(scale, scale);
                         drawBack(p, QRect(-m_cw / 2, -m_ch / 2, m_cw, m_ch));
                         p.restore();
                     }

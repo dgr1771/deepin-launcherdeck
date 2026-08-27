@@ -17,6 +17,7 @@ add_executable(deepin-launcherdeck
     src/appscanner.cpp
     src/deckcard.cpp
     src/freecell.cpp
+    src/slotmachine.cpp
     src/globalhotkey.cpp
     src/tarotpanel.cpp
 )

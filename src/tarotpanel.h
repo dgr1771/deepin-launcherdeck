@@ -3,6 +3,7 @@
 #include <QWidget>
 #include "appscanner.h"
 #include "freecell.h"
+#include "slotmachine.h"
 
 class QLineEdit;
 class QScrollArea;
@@ -12,6 +13,7 @@ class FlowLayout;
 class QPushButton;
 class QLabel;
 class QButtonGroup;
+class QComboBox;
 
 class TarotPanel : public QWidget {
     Q_OBJECT
@@ -48,6 +50,11 @@ private:
     void showReading(const AppEntry &a, const QRect &cardRect);   // 牌意解读浮层
     void hideReading();
     void showCatMenu(const AppEntry &a, const QPoint &globalPos); // 右键归类菜单
+    void toggleSlotMode();
+    void enterSlotUi();
+    void loadAppearance();
+    void showAppearanceDialog();
+    void applyAppearance();
 
     QVector<AppEntry> m_apps;
     QLineEdit *m_search = nullptr;
@@ -55,8 +62,11 @@ private:
     QWidget *m_gridBox = nullptr;
     FlowLayout *m_grid = nullptr;
     FreeCellBoard *m_board = nullptr;
+    SlotMachineBoard *m_slot = nullptr;
     QPushButton *m_modeBtn = nullptr;
     QPushButton *m_newBtn = nullptr;
+    QPushButton *m_slotBtn = nullptr;
+    QComboBox *m_difficultyBox = nullptr;
     QLabel *m_moveLbl = nullptr;
     QLabel *m_subLbl = nullptr;
     QTimer *m_refitTimer = nullptr;
@@ -68,5 +78,10 @@ private:
     QString m_readingPath;                  // 待解读的应用 desktopPath
     QRect m_readingCardRect;                // 触发悬停的牌矩形（浮层定位用）
     QPushButton *m_fortuneBtn = nullptr;    // 今日一抽
+    QPushButton *m_appearanceBtn = nullptr;  // 外观设置
+    int m_themeId = 0;
+    int m_panelOpacity = 88;
     bool gameMode = false;
+    bool slotMode = false;
+    int m_difficulty = 1;
 };

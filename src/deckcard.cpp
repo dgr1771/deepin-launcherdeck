@@ -101,20 +101,20 @@ void DeckCard::drawTarotBack(QPainter &p) {
 
     QPainterPath body;
     body.addRoundedRect(QRectF(0.5, 0.5, w - 1, h - 1), 10, 10);
-    // Discord Dark 牌背：#2B2D31→#1E1F22 渐变 + Blurple 顶光
-    p.fillPath(body, QColor(30, 31, 34));
+    // 蓝紫玻璃牌背：深色底 + 柔和顶光
+    p.fillPath(body, QColor(17, 24, 46));
     QLinearGradient g(0, 0, w * 0.3, h);
     const qreal hl = m_liftVal;
-    g.setColorAt(0.0, QColor(43, 45, 49, 235));
-    g.setColorAt(1.0, QColor(30, 31, 34, 235));
+    g.setColorAt(0.0, QColor(38, 48, 84, 242));
+    g.setColorAt(1.0, QColor(17, 24, 46, 242));
     p.fillPath(body, g);
     {
         QLinearGradient bp(0, 0, 0, h * 0.6);   // Blurple 微光（悬停增强）
-        bp.setColorAt(0.0, QColor(88, 101, 242, 28 + 50 * hl));
-        bp.setColorAt(1.0, QColor(88, 101, 242, 0));
+        bp.setColorAt(0.0, QColor(139, 124, 246, 30 + 56 * hl));
+        bp.setColorAt(1.0, QColor(139, 124, 246, 0));
         p.fillPath(body, bp);
     }
-    p.setPen(QPen(QColor(255, 255, 255, 38 + 60 * hl), 1));
+    p.setPen(QPen(QColor(214, 222, 255, 46 + 66 * hl), 1));
     p.drawPath(body);
 
     // 星点纹理：按应用名哈希确定性布点
@@ -166,7 +166,7 @@ void DeckCard::drawTarotBack(QPainter &p) {
     inner.addRoundedRect(QRectF(inset, inset, w - 2 * inset, h - 2 * inset), 7, 7);
     p.setPen(QPen(QColor(255, 255, 255, 60 + 60 * lift), 1.2));
     p.drawPath(inner);
-    p.setPen(QPen(QColor(88, 101, 242, 120 + 120 * lift), 1.4));
+    p.setPen(QPen(QColor(139, 124, 246, 130 + 120 * lift), 1.4));
     const qreal d = 4.0;
     const QPointF corners[4] = {{inset + 7, inset + 7}, {w - inset - 7, inset + 7},
                                 {inset + 7, h - inset - 7}, {w - inset - 7, h - inset - 7}};
@@ -196,19 +196,19 @@ void DeckCard::drawFace(QPainter &p) {
     const qreal w = width(), h = height();
     const qreal inset = 5;
 
-    // Discord 浅色牌面（#F2F3F5 系，与牌背强反差）
+    // 柔和浅色牌面：与深色牌背保持清晰反差
     QPainterPath body;
     body.addRoundedRect(QRectF(0.5, 0.5, w - 1, h - 1), 10, 10);
     QLinearGradient g(0, 0, 0, h);
-    g.setColorAt(0.0, QColor(242, 243, 245));
-    g.setColorAt(1.0, QColor(226, 229, 233));
+    g.setColorAt(0.0, QColor(245, 247, 255));
+    g.setColorAt(1.0, QColor(222, 229, 246));
     p.fillPath(body, g);
-    p.setPen(QPen(QColor(148, 163, 184, 190), 1));
+    p.setPen(QPen(QColor(165, 180, 252, 190), 1));
     p.drawPath(body);
     // 内侧 Blurple 细线呼应
     QPainterPath inner;
     inner.addRoundedRect(QRectF(inset, inset, w - 2 * inset, h - 2 * inset), 7, 7);
-    p.setPen(QPen(QColor(88, 101, 242, 110), 1));
+    p.setPen(QPen(QColor(139, 124, 246, 120), 1));
     p.drawPath(inner);
 
     if (!m_icon.isNull()) {

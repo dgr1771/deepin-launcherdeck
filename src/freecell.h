@@ -48,7 +48,9 @@ public:
     QSize boardSize() const;                 // 建议尺寸（随牌面常量）
     void newGame(int dealNo);                // 纯牌局（自测用，无应用名）
     void newGame(int dealNo, const QStringList &appNames);  // 前 48 张按使用排名注入应用名（A=最常用）
+    void newGame(int dealNo, const QStringList &appNames, int difficulty);
     void restore(const FCState &s);          // 恢复存档（不带发牌动画）
+    void setBackTheme(int theme);
     const FCState &state() const { return m_s; }
 
 signals:
@@ -78,4 +80,5 @@ private:
     qint64 m_animT0 = 0;                               // 动画起始时刻（ms）
     bool m_animating = false;
     QVector<qreal> m_washRotL, m_washRotR;             // 每张牌的洗牌随机旋转（按局号做种，重绘稳定）
+    int m_backTheme = 0;                               // 0 应用牌堆 / 1 极夜 / 2 琥珀 / 3 清透
 };

@@ -3,6 +3,7 @@
 #include "flowlayout.h"
 #include <algorithm>
 #include <QButtonGroup>
+#include <QComboBox>
 #include <QContextMenuEvent>
 #include <QCursor>
 #include <QDate>
@@ -20,6 +21,7 @@
 #include <QJsonObject>
 #include <QLabel>
 #include <QLineEdit>
+#include <QLinearGradient>
 #include <QMenu>
 #include <QMouseEvent>
 #include <QProcess>
@@ -27,6 +29,7 @@
 #include <QPainterPath>
 #include <QPushButton>
 #include <QScrollArea>
+#include <QSlider>
 #include <QSettings>
 #include <QTimer>
 #include <QUrl>
@@ -66,11 +69,27 @@ static QSettings *usageStore() {
     return s;
 }
 
+struct AppearancePreset {
+    const char *name;
+    QColor top;
+    QColor bottom;
+    QColor glow;
+};
+
+static const AppearancePreset APPEARANCE_PRESETS[] = {
+    {"应用牌堆 · 深蓝紫", QColor(21, 26, 49), QColor(35, 43, 82), QColor(139, 124, 246)},
+    {"极夜星芒 · 冷蓝",   QColor(10, 18, 38), QColor(18, 34, 68), QColor(96, 165, 250)},
+    {"琥珀复古 · 暖金",   QColor(45, 28, 28), QColor(72, 45, 31), QColor(245, 190, 92)},
+    {"清透雾面 · 浅色",   QColor(192, 205, 228), QColor(151, 169, 204), QColor(100, 116, 139)},
+    {"Discord · Blurple", QColor(43, 45, 49), QColor(30, 31, 34), QColor(88, 101, 242)},
+};
+
 TarotPanel::TarotPanel(QWidget *parent)
     : QWidget(parent, Qt::Tool | Qt::FramelessWindowHint | Qt::WindowStaysOnTopHint)
 {
     setAttribute(Qt::WA_TranslucentBackground);
     setObjectName(QStringLiteral("panel"));
+    loadAppearance();
     buildUi();
     refresh();
 }
@@ -82,9 +101,9 @@ void TarotPanel::buildUi() {
 
     // 标题区（deepin 原生排版：主标题 + 状态行）
     auto *title = new QLabel(QStringLiteral("✦ 应用牌堆"), this);
-    title->setStyleSheet("color: #ffffff; font-size: 19px; font-weight: 700; letter-spacing: 5px; background: transparent;");
+    title->setStyleSheet("color: #f4f7ff; font-size: 19px; font-weight: 700; letter-spacing: 5px; background: transparent;");
     m_subLbl = new QLabel(QStringLiteral("正在召集本机程序…"), this);
-    m_subLbl->setStyleSheet("color: rgba(255,255,255,0.5); font-size: 11px; letter-spacing: 1px; background: transparent;");
+    m_subLbl->setStyleSheet("color: rgba(204,213,238,0.68); font-size: 11px; letter-spacing: 1px; background: transparent;");
     root->addWidget(title);
     root->addWidget(m_subLbl);
 
@@ -96,34 +115,55 @@ void TarotPanel::buildUi() {
     m_newBtn = new QPushButton(QStringLiteral("🆕 新局"), this);
     m_newBtn->setCursor(Qt::PointingHandCursor);
     m_newBtn->hide();
+    m_difficultyBox = new QComboBox(this);
+    m_difficultyBox->addItems({QStringLiteral("初级 · 快速局"), QStringLiteral("中级 · 练习局"), QStringLiteral("经典 · 随机局")});
+    m_difficultyBox->setCurrentIndex(m_difficulty);
+    m_difficultyBox->setToolTip(QStringLiteral("选择空当接龙难度"));
+    m_difficultyBox->hide();
     m_moveLbl = new QLabel(this);
     m_moveLbl->setStyleSheet("color: rgba(255,255,255,0.65); font-size: 12px;");
     m_moveLbl->hide();
     const QString btnQss = QStringLiteral(
-        "QPushButton { background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.16);"
+        "QPushButton { background: rgba(255,255,255,0.07); border: 1px solid rgba(165,180,252,0.25);"
         "  border-radius: 14px; padding: 5px 14px; color: #fff; font-size: 12px; }"
-        "QPushButton:hover { background: rgba(255,255,255,0.16); }");
+        "QPushButton:hover { background: rgba(139,124,246,0.25); border-color: rgba(165,180,252,0.55); }");
     m_modeBtn->setStyleSheet(btnQss);
     m_newBtn->setStyleSheet(btnQss);
     top->addWidget(m_modeBtn);
     top->addWidget(m_newBtn);
+    top->addWidget(m_difficultyBox);
     top->addWidget(m_moveLbl);
+    // 小游戏入口固定在左侧，避免被右侧搜索框挤掉。
+    m_slotBtn = new QPushButton(QStringLiteral("🎰 幸运老虎机"), this);
+    m_slotBtn->setCursor(Qt::PointingHandCursor);
+    m_slotBtn->setStyleSheet(btnQss);
+    connect(m_slotBtn, &QPushButton::clicked, this, [this] { toggleSlotMode(); });
+    top->addWidget(m_slotBtn);
     top->addStretch();
     connect(m_modeBtn, &QPushButton::clicked, this, [this] { toggleMode(); });
     connect(m_newBtn, &QPushButton::clicked, this, [this] {
-        m_board->newGame(FCLogic::randomDealNo(), appNamesByUsage());
+        m_board->newGame(FCLogic::randomDealNo(), appNamesByUsage(), m_difficulty);
         saveGame();
         updateGameChrome();
+    });
+    connect(m_difficultyBox, qOverload<int>(&QComboBox::currentIndexChanged), this, [this](int index) {
+        m_difficulty = qBound(0, index, 2);
+        usageStore()->setValue(QStringLiteral("game/difficulty"), m_difficulty);
     });
     // 今日一抽（金卡弹层，当天固定）
     m_fortuneBtn = new QPushButton(QStringLiteral("🎴 今日一抽"), this);
     m_fortuneBtn->setCursor(Qt::PointingHandCursor);
     m_fortuneBtn->setStyleSheet(QStringLiteral(
-        "QPushButton { color: #ffd782; border: 1px solid rgba(255,215,130,0.55);"
-        "  border-radius: 14px; padding: 5px 14px; font-size: 12px; background: rgba(255,215,130,0.12); }"
-        "QPushButton:hover { background: rgba(255,215,130,0.24); }"));
+        "QPushButton { color: #c4b5fd; border: 1px solid rgba(165,180,252,0.62);"
+        "  border-radius: 14px; padding: 5px 14px; font-size: 12px; background: rgba(139,124,246,0.14); }"
+        "QPushButton:hover { background: rgba(139,124,246,0.28); }"));
     connect(m_fortuneBtn, &QPushButton::clicked, this, [this] { showFortune(); });
     top->addWidget(m_fortuneBtn);
+    m_appearanceBtn = new QPushButton(QStringLiteral("⚙ 外观"), this);
+    m_appearanceBtn->setCursor(Qt::PointingHandCursor);
+    m_appearanceBtn->setStyleSheet(btnQss);
+    connect(m_appearanceBtn, &QPushButton::clicked, this, [this] { showAppearanceDialog(); });
+    top->addWidget(m_appearanceBtn);
     root->addLayout(top);
 
     // 牌意解读浮层（悬停 450ms 触发）
@@ -147,7 +187,7 @@ void TarotPanel::buildUi() {
     m_search->setStyleSheet(
         "QLineEdit { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);"
         "  border-radius: 16px; padding: 0 14px; color: #fff; font-size: 13px; }"
-        "QLineEdit:focus { border-color: #5865F2; }");
+        "QLineEdit:focus { border-color: #8b7cf6; }");
     top->addWidget(m_search);
     connect(m_search, &QLineEdit::textChanged, this, [this](const QString &t) { rebuildGrid(t); });
 
@@ -184,6 +224,10 @@ void TarotPanel::buildUi() {
         clearSavedGame();   // 通关清档，下次进游戏模式开新局
     });
 
+    m_slot = new SlotMachineBoard(this);
+    m_slot->hide();
+    root->addWidget(m_slot, 1);
+
     // 小屏/高缩放夹紧（Windows 版同款教训：写死 820 在 150% 缩放会裁底）
     QRect av = QGuiApplication::primaryScreen()->availableGeometry();
     resize(qMin(1280, av.width() - 16), qMin(820, av.height() - 12));
@@ -196,6 +240,93 @@ void TarotPanel::buildUi() {
     connect(m_refitTimer, &QTimer::timeout, this, [this] {
         if (!gameMode) rebuildGrid(m_search->text());
     });
+    applyAppearance();
+}
+
+void TarotPanel::loadAppearance() {
+    QSettings *s = usageStore();
+    m_themeId = qBound(0, s->value(QStringLiteral("appearance/theme"), 0).toInt(), 3);
+    m_panelOpacity = qBound(65, s->value(QStringLiteral("appearance/opacity"), 88).toInt(), 100);
+    m_difficulty = qBound(0, s->value(QStringLiteral("game/difficulty"), 1).toInt(), 2);
+}
+
+void TarotPanel::applyAppearance() {
+    if (m_board) m_board->setBackTheme(m_themeId);
+    update();
+}
+
+void TarotPanel::showAppearanceDialog() {
+    QDialog dlg(this);
+    dlg.setWindowTitle(QStringLiteral("外观设置"));
+    dlg.setModal(true);
+    dlg.setMinimumWidth(330);
+    dlg.setStyleSheet(QStringLiteral(
+        "QDialog { background: #1b2340; color: #eef2ff; } QLabel { color: #eef2ff; }"
+        "QComboBox, QSlider { color: #eef2ff; }"
+        "QComboBox { background: rgba(255,255,255,0.08); border: 1px solid rgba(165,180,252,0.35);"
+        " border-radius: 8px; padding: 6px 10px; }"
+        "QComboBox QAbstractItemView { background: #202a4b; color: #eef2ff;"
+        " border: 1px solid rgba(165,180,252,0.45); selection-background-color: #8b7cf6;"
+        " selection-color: #ffffff; }"
+        "QComboBox QAbstractItemView::item { color: #eef2ff; padding: 6px 8px; }"
+        "QComboBox QAbstractItemView::item:hover { background: rgba(139,124,246,0.36); color: #ffffff; }"
+        "QPushButton { background: rgba(139,124,246,0.22); color: #fff; border: 1px solid rgba(165,180,252,0.55);"
+        " border-radius: 8px; padding: 6px 12px; }"
+        "QPushButton:hover { background: rgba(139,124,246,0.38); }"));
+    auto *v = new QVBoxLayout(&dlg);
+    v->setContentsMargins(20, 18, 20, 16);
+    v->setSpacing(12);
+    auto *hint = new QLabel(QStringLiteral("选择桌面氛围，牌面会同步切换牌背主题。"), &dlg);
+    hint->setStyleSheet(QStringLiteral("color: rgba(224,231,255,0.68); font-size: 11px;"));
+    v->addWidget(hint);
+
+    auto *themeLabel = new QLabel(QStringLiteral("界面主题"), &dlg);
+    auto *theme = new QComboBox(&dlg);
+    for (const AppearancePreset &preset : APPEARANCE_PRESETS)
+        theme->addItem(QString::fromUtf8(preset.name));
+    theme->setCurrentIndex(m_themeId);
+    v->addWidget(themeLabel);
+    v->addWidget(theme);
+
+    auto *opacityLabel = new QLabel(&dlg);
+    auto *opacity = new QSlider(Qt::Horizontal, &dlg);
+    opacity->setRange(65, 100);
+    opacity->setValue(m_panelOpacity);
+    auto updateOpacityLabel = [opacityLabel, opacity] {
+        opacityLabel->setText(QStringLiteral("界面透明度　%1%").arg(opacity->value()));
+    };
+    updateOpacityLabel();
+    v->addWidget(opacityLabel);
+    v->addWidget(opacity);
+
+    auto *buttons = new QHBoxLayout();
+    auto *reset = new QPushButton(QStringLiteral("恢复默认"), &dlg);
+    auto *close = new QPushButton(QStringLiteral("完成"), &dlg);
+    buttons->addWidget(reset);
+    buttons->addStretch();
+    buttons->addWidget(close);
+    v->addLayout(buttons);
+
+    connect(theme, qOverload<int>(&QComboBox::currentIndexChanged), this, [this](int index) {
+        m_themeId = qBound(0, index, 4);
+        usageStore()->setValue(QStringLiteral("appearance/theme"), m_themeId);
+        applyAppearance();
+    });
+    connect(opacity, &QSlider::valueChanged, this, [this, updateOpacityLabel](int value) mutable {
+        m_panelOpacity = value;
+        usageStore()->setValue(QStringLiteral("appearance/opacity"), value);
+        updateOpacityLabel();
+        update();
+    });
+    connect(reset, &QPushButton::clicked, this, [this, theme, opacity] {
+        m_themeId = 0;
+        m_panelOpacity = 88;
+        theme->setCurrentIndex(0);
+        opacity->setValue(88);
+        applyAppearance();
+    });
+    connect(close, &QPushButton::clicked, &dlg, &QDialog::accept);
+    dlg.exec();
 }
 
 void TarotPanel::resizeEvent(QResizeEvent *e) {
@@ -236,8 +367,8 @@ void TarotPanel::rebuildChips() {
         "  color: rgba(255,255,255,0.78); background: rgba(255,255,255,0.05);"
         "  border: 1px solid rgba(255,255,255,0.1); }"
         "QPushButton:hover { background: rgba(255,255,255,0.09); }"
-        "QPushButton:checked { color: #fff; border-color: #5865F2;"   // Discord Blurple
-        "  background: rgba(88,101,242,0.28); }");
+        "QPushButton:checked { color: #fff; border-color: #8b7cf6;"
+        "  background: rgba(139,124,246,0.30); }");
 
     auto addChip = [this, &cnt, &chipQss](const QString &id, const QString &label,
                                           bool custom, const QString &customId) {
@@ -536,12 +667,22 @@ QStringList TarotPanel::appNamesByUsage() const {
 }
 
 void TarotPanel::toggleMode() {
+    if (slotMode) {
+        slotMode = false;
+        m_slot->hide();
+        m_scroll->show();
+        m_search->show();
+        updateGameChrome();
+        rebuildGrid(m_search->text());
+        return;
+    }
     gameMode = !gameMode;
     if (gameMode) {
         ensureGame();
         enterGameUi();
     } else {
         m_board->hide();
+        m_difficultyBox->hide();
         m_scroll->show();
         m_search->show();
         rebuildGrid(m_search->text());
@@ -552,6 +693,7 @@ void TarotPanel::toggleMode() {
 void TarotPanel::enterGameUi() {
     m_scroll->hide();
     m_search->hide();
+    m_slot->hide();
     m_board->show();
     m_board->setFocus();
 }
@@ -559,20 +701,44 @@ void TarotPanel::enterGameUi() {
 void TarotPanel::ensureGame() {
     loadGame();
     if (m_board->state().dealNo == 0) {
-        m_board->newGame(FCLogic::randomDealNo(), appNamesByUsage());
+        m_board->newGame(FCLogic::randomDealNo(), appNamesByUsage(), m_difficulty);
         saveGame();
     }
     updateGameChrome();
 }
 
 void TarotPanel::updateGameChrome() {
-    m_modeBtn->setText(gameMode ? QStringLiteral("🃏 塔罗牌阵") : QStringLiteral("🎮 空当接龙"));
+    m_modeBtn->setText((gameMode || slotMode) ? QStringLiteral("🃏 塔罗牌阵") : QStringLiteral("🎮 空当接龙"));
     m_newBtn->setVisible(gameMode);
+    m_difficultyBox->setVisible(gameMode);
     m_moveLbl->setVisible(gameMode);
+    m_slotBtn->setVisible(!gameMode);
     if (gameMode) {
         const FCState &s = m_board->state();
         m_moveLbl->setText(QStringLiteral("第 %1 局 · %2 步").arg(s.dealNo).arg(s.moves));
     }
+}
+
+void TarotPanel::toggleSlotMode() {
+    if (slotMode) {
+        slotMode = false;
+        m_slot->hide();
+        m_scroll->show();
+        m_search->show();
+    } else {
+        gameMode = false;
+        slotMode = true;
+        m_board->hide();
+        m_scroll->hide();
+        m_search->hide();
+        enterSlotUi();
+    }
+    updateGameChrome();
+}
+
+void TarotPanel::enterSlotUi() {
+    m_slot->show();
+    m_slot->setFocus();
 }
 
 void TarotPanel::saveGame() {
@@ -763,19 +929,28 @@ void TarotPanel::toggle() {
 }
 
 void TarotPanel::paintEvent(QPaintEvent *) {
-    // Discord Dark 配色：深灰面板 + Blurple 氛围光（左上微光给面板纵深）
+    // 蓝紫玻璃：保持半透明，同时用渐变和边缘高光压住桌面背景杂讯
     QPainter p(this);
     p.setRenderHint(QPainter::Antialiasing);
     QPainterPath path;
     path.addRoundedRect(rect().adjusted(0, 0, -1, -1), 14, 14);
-    p.fillPath(path, QColor(43, 45, 49, 242));          // #2B2D31
+    const AppearancePreset &preset = APPEARANCE_PRESETS[qBound(0, m_themeId, 4)];
+    const int alpha = qRound(m_panelOpacity * 2.55);
+    QLinearGradient bg(0, 0, width(), height());
+    QColor top = preset.top; top.setAlpha(alpha);
+    QColor bottom = preset.bottom; bottom.setAlpha(qMax(0, alpha - 6));
+    bg.setColorAt(0.0, top);
+    bg.setColorAt(1.0, bottom);
+    p.fillPath(path, bg);
     QRadialGradient amb(QPointF(width() * 0.18, height() * 0.06), width() * 0.75);
-    amb.setColorAt(0.0, QColor(88, 101, 242, 42));      // #5865F2 blurple 氛围
-    amb.setColorAt(1.0, QColor(88, 101, 242, 0));
+    QColor glow = preset.glow; glow.setAlpha(54);
+    QColor glowClear = preset.glow; glowClear.setAlpha(0);
+    amb.setColorAt(0.0, glow);
+    amb.setColorAt(1.0, glowClear);
     p.fillPath(path, amb);
-    p.setPen(QPen(QColor(255, 255, 255, 22), 1));       // 发丝白边
+    p.setPen(QPen(QColor(165, 180, 252, 72), 1));
     p.drawPath(path);
-    p.setPen(QPen(QColor(255, 255, 255, 46), 1));       // 顶部内高光
+    p.setPen(QPen(QColor(255, 255, 255, 58), 1));
     p.drawLine(QPointF(24, 1.5), QPointF(width() - 24.0, 1.5));
 }
 
