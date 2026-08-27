@@ -13,6 +13,7 @@
 #include <QEvent>
 #include <QFile>
 #include <QFrame>
+#include <QApplication>
 #include <QGuiApplication>
 #include <QHBoxLayout>
 #include <QIcon>
@@ -860,8 +861,13 @@ void TarotPanel::rebuildGrid(const QString &filter) {
 
 bool TarotPanel::event(QEvent *e) {
     if (e->type() == QEvent::WindowDeactivate) {
-        // 失焦收牌（延迟防瞬时焦点抖动），与 Windows 版同节奏
-        QTimer::singleShot(220, this, [this] { if (!isActiveWindow()) hide(); });
+        // 失焦收牌（延迟防瞬时焦点抖动），与 Windows 版同节奏。
+        // 弹窗/右键菜单会抢焦点触发 Deactivate——它们活跃期间不收（win 版 suspendHide 同病同修），
+        // 否则点开"外观/新建分类/今日一抽/归类菜单"面板就消失，关弹窗后还得手动唤回
+        QTimer::singleShot(220, this, [this] {
+            if (!isActiveWindow() && !QApplication::activeModalWidget() && !QApplication::activePopupWidget())
+                hide();
+        });
     }
     return QWidget::event(e);
 }
