@@ -1,3 +1,9 @@
+deepin-launcherdeck (0.9.1-1) unstable; urgency=medium
+
+  * 修：点开外观/新建分类/今日一抽/归类菜单时面板自动收起（弹窗抢焦点期间不收）
+
+ -- dgr <dgr@dgr-PC>  Thu, 27 Aug 2026 13:50:00 +0800
+
 deepin-launcherdeck (0.9.0-1) unstable; urgency=medium
 
   * 合流 codex 分支：老虎机五轴游戏（金币/头奖/每小时限玩）
