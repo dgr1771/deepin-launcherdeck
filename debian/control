@@ -1,7 +1,7 @@
 Source: deepin-launcherdeck
 Section: utils
 Priority: optional
-Maintainer: dgr <dgr@dgr-PC>
+Maintainer: dgr <dgr1771@users.noreply.github.com>
 Build-Depends: debhelper-compat (= 13),
                cmake,
                pkg-config,
@@ -13,7 +13,7 @@ Build-Depends: debhelper-compat (= 13),
                libx11-dev,
                libxcb1-dev
 Standards-Version: 4.6.0
-Homepage: https://github.com/dgr1771
+Homepage: https://github.com/dgr1771/deepin-launcherdeck
 
 Package: deepin-launcherdeck
 Architecture: any
@@ -25,8 +25,8 @@ Depends: ${shlibs:Depends},
          libdtk6core,
          libdtk6gui,
          libdtk6widget
-Description: 应用牌堆（DTK 原生应用启动器）
- 托盘常驻 + 全局热键的塔罗牌阵应用启动器，DTK 创新原生应用大赛参赛作品。
+Description: 唤启——应用一屏启动器（DTK 原生）
+ 托盘常驻 + Ctrl+J 全局热键唤起的应用启动器，deepin 原生 DTK6 打造。
  .
- 塔罗牌阵启动模式：本机应用扫描成牌、花色归类、常用浮前、点牌即达；
+ 应用一屏：本机应用扫描成卡、花色归类、常用浮前、点卡即启；
  空当接龙游戏模式：微软经典发牌、标准规则、进度持久化。

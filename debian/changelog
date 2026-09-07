@@ -1,9 +1,20 @@
+deepin-launcherdeck (0.9.4-1) unstable; urgency=medium
+
+  * 打包规范修正（lintian --pedantic 复核）：
+    - 补 debian/copyright（GPL-3.0，machine-readable 格式）
+    - Maintainer/changelog 邮箱改 GitHub noreply 有效域名
+    - Description 重写为唤启话术
+    - .desktop 转 LF 行尾（desktop-entry-file-has-crs）
+    - 补 man 手册页（no-manual-page 清零）
+
+ -- dgr <dgr1771@users.noreply.github.com>  Mon, 07 Sep 2026 22:05:00 +0800
+
 deepin-launcherdeck (0.9.3-2) unstable; urgency=medium
 
   * 修：启动器/任务栏仍显示旧图——desktop Icon 改绝对路径，绕开 dde-shell
     进程内按图标名缓存的旧 QPixmap（长驻进程不重启即可生效）
 
- -- dgr <dgr@dgr-PC>  Mon, 07 Sep 2026 21:40:00 +0800
+ -- dgr <dgr1771@users.noreply.github.com>  Mon, 07 Sep 2026 21:40:00 +0800
 
 deepin-launcherdeck (0.9.3-1) unstable; urgency=medium
 
@@ -11,13 +22,13 @@ deepin-launcherdeck (0.9.3-1) unstable; urgency=medium
   * DBlurEffectWidget 系统级真毛玻璃面板（deepin-skills dtk-development 指引）
   * 回收站纳入牌堆；应用一屏标题行统计重排；GPL-3.0 LICENSE
 
- -- dgr <dgr@dgr-PC>  Mon, 07 Sep 2026 20:58:00 +0800
+ -- dgr <dgr1771@users.noreply.github.com>  Mon, 07 Sep 2026 20:58:00 +0800
 
 deepin-launcherdeck (0.9.1-1) unstable; urgency=medium
 
   * 修：点开外观/新建分类/今日一抽/归类菜单时面板自动收起（弹窗抢焦点期间不收）
 
- -- dgr <dgr@dgr-PC>  Thu, 27 Aug 2026 13:50:00 +0800
+ -- dgr <dgr1771@users.noreply.github.com>  Thu, 27 Aug 2026 13:50:00 +0800
 
 deepin-launcherdeck (0.9.0-1) unstable; urgency=medium
 
@@ -26,19 +37,19 @@ deepin-launcherdeck (0.9.0-1) unstable; urgency=medium
   * 接龙快速模式（初级/中级/经典）；发牌动画升级（交替甩动+残影）
   * Discord Blurple 收编为第 5 套预设
 
- -- dgr <dgr@dgr-PC>  Thu, 27 Aug 2026 13:45:00 +0800
+ -- dgr <dgr1771@users.noreply.github.com>  Thu, 27 Aug 2026 13:45:00 +0800
 
 deepin-launcherdeck (0.5.1-1) unstable; urgency=medium
 
   * 发牌动画：中央堆三段抖洗 + 逐张飞牌 + 落地翻面
-  * 牌阵行居中：修复不满行时空隙全堆右侧的左右不对称
+  * 应用牌阵行居中：修复不满行时空隙全堆右侧的左右不对称
 
- -- dgr <dgr@dgr-PC>  Mon, 25 Aug 2026 14:40:00 +0800
+ -- dgr <dgr1771@users.noreply.github.com>  Mon, 25 Aug 2026 14:40:00 +0800
 
 deepin-launcherdeck (0.4.0-1) unstable; urgency=medium
 
-  * 塔罗牌阵启动模式：自适应缩放、花色归类、星夜牌面自绘
+  * 应用牌阵启动模式：自适应缩放、花色归类、星夜牌面自绘
   * 空当接龙游戏模式：微软经典发牌、标准规则、进度持久化
   * 托盘常驻 + Ctrl+J 全局热键
 
- -- dgr <dgr@dgr-PC>  Mon, 25 Aug 2026 14:30:00 +0800
+ -- dgr <dgr1771@users.noreply.github.com>  Mon, 25 Aug 2026 14:30:00 +0800

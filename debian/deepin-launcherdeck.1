@@ -1,0 +1,24 @@
+.TH DEEPIN-LAUNCHERDECK 1 "2026-09-07" "deepin-launcherdeck 0.9.4" "User Commands"
+.\" 中文 manpage：左对齐，避免 groff 对 CJK 两端对齐告警
+.ad l
+.SH NAME
+deepin-launcherdeck \- 唤启，应用一屏启动器（DTK 原生）
+.SH SYNOPSIS
+.B deepin-launcherdeck
+.SH DESCRIPTION
+唤启（Launcher Deck）：托盘常驻 + Ctrl+J 全局热键唤起的应用启动器，deepin 原生 DTK6 打造。
+.PP
+应用一屏模式：本机应用扫描成卡、花色归类、拼音搜索、常用浮前、点卡即启；
+空当接龙游戏模式：微软经典发牌、标准规则、进度持久化。
+.SH ENVIRONMENT
+.TP
+.I DECK_SELFTEST=1
+启动时运行 24 项逻辑自测断言，结果写日志，按结果返回退出码。
+.TP
+.I DECK_DEBUG_SHOW / DECK_DEBUG_GAME / DECK_DEBUG_FORTUNE
+联测钩子：启动即显示面板 / 直接进游戏模式 / 弹出今日一抽。
+.SH FILES
+.IR ~/.config/dgr/deepin-launcherdeck.conf
+— 使用频次与自定义分类持久化。
+.SH AUTHOR
+dgr <https://github.com/dgr1771/deepin-launcherdeck>
