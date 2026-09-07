@@ -1,3 +1,11 @@
+deepin-launcherdeck (0.9.3-1) unstable; urgency=medium
+
+  * 更名「唤启」：窗口标题/托盘提示/.desktop 全部去塔罗话术
+  * DBlurEffectWidget 系统级真毛玻璃面板（deepin-skills dtk-development 指引）
+  * 回收站纳入牌堆；应用一屏标题行统计重排；GPL-3.0 LICENSE
+
+ -- dgr <dgr@dgr-PC>  Mon, 07 Sep 2026 20:58:00 +0800
+
 deepin-launcherdeck (0.9.1-1) unstable; urgency=medium
 
   * 修：点开外观/新建分类/今日一抽/归类菜单时面板自动收起（弹窗抢焦点期间不收）

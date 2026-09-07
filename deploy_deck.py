@@ -151,7 +151,7 @@ def deb(c):
 
 def install(c):
     print("上传 deb 并安装 ...")
-    rc, out, _ = run(c, "ls %s/../deepin-launcherdeck_*.deb 2>/dev/null | head -1" % REMOTE_ROOT)
+    rc, out, _ = run(c, "ls %s/../deepin-launcherdeck_*.deb 2>/dev/null | sort -V | tail -1" % REMOTE_ROOT)
     deb_path = out.strip()
     if not deb_path or ".deb" not in deb_path:
         print("未找到 deb，先运行: python deploy_deck.py deb"); return

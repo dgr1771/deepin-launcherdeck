@@ -13,6 +13,20 @@
 
 DWIDGET_USE_NAMESPACE
 
+static QIcon drawTrayIcon();
+
+static QIcon trayIcon() {
+    // 与启动器/桌面同一张图（hicolor 的 deepin-launcherdeck），保证托盘=桌面=任务栏一致；
+    // 开发目录直跑（未装图标）时回退程序化绘制
+    QIcon themed = QIcon::fromTheme(QStringLiteral("deepin-launcherdeck"));
+    if (!themed.isNull()) {
+        // 以像素重包一层：托盘走 IconPixmap 通道，绕开 dde-dock 长驻进程的同名图标缓存
+        QPixmap pm = themed.pixmap(64, 64);
+        if (!pm.isNull()) return QIcon(pm);
+        return themed;
+    }
+    return drawTrayIcon();
+}
 static QIcon drawTrayIcon() {
     // 程序化画托盘图标：深底圆角 + 金色 ✦（无外部资源依赖）
     QPixmap pm(64, 64);
@@ -50,9 +64,10 @@ int main(int argc, char *argv[]) {
     DApplication app(argc, argv);
     app.setOrganizationName("dgr");
     app.setApplicationName("deepin-launcherdeck");
-    app.setApplicationVersion("0.6.2");
+    app.setApplicationVersion("0.9.3");
     // 图标主题兜底：bloom 缺系统图标（如 user-trash 只在 hazy-color），缺名时回退查 hazy-color
     QIcon::setFallbackThemeName(QStringLiteral("hazy-color"));
+    app.setWindowIcon(trayIcon());   // 窗口图标与托盘/桌面同源
     app.setProductName(QStringLiteral("唤启"));
     app.setApplicationDescription(QStringLiteral("托盘常驻 + 全局热键的应用一屏启动器（DTK 原生版）"));
     app.loadTranslator();
@@ -66,7 +81,7 @@ int main(int argc, char *argv[]) {
         QTimer::singleShot(400, &panel, [&panel] { panel.show(); panel.showFortune(); });
 
     // 托盘：左键/菜单展开
-    auto *tray = new QSystemTrayIcon(drawTrayIcon(), &app);
+    auto *tray = new QSystemTrayIcon(trayIcon(), &app);
     tray->setToolTip(QStringLiteral("唤启 · Ctrl+J 唤起"));
     auto *menu = new QMenu();
     menu->addAction(QStringLiteral("展开应用一屏（Ctrl+J）"), &panel, [this_ = &panel] { this_->toggle(); });
