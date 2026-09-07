@@ -1,0 +1,8 @@
+# Debian 打包文件必须 LF：CRLF 会让 lintian 报 desktop-entry-file-has-crs、
+# 且部分 Debian 工具（dpkg/dh）解析 CRLF 出错
+debian/* text eol=lf
+*.desktop text eol=lf
+*.1 text eol=lf
+*.sh text eol=lf
+*.py text eol=lf
+*.png binary
