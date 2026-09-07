@@ -1,8 +1,8 @@
 [Desktop Entry]
 Type=Application
-Name=应用牌堆
+Name=唤启
 Name[en_US]=Launcher Deck
-Comment=托盘常驻 + 全局热键的塔罗牌阵应用启动器
+Comment=所有应用，一屏全览，一唤即启
 Exec=/usr/bin/deepin-launcherdeck
 Icon=launcher-deck
 Terminal=false

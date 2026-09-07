@@ -32,3 +32,4 @@ target_link_libraries(deepin-launcherdeck PRIVATE
 
 install(TARGETS deepin-launcherdeck RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
 install(FILES data/launcher-deck.desktop DESTINATION ${CMAKE_INSTALL_DATADIR}/applications)
+install(FILES assets/launcher-deck.png DESTINATION ${CMAKE_INSTALL_DATADIR}/icons/hicolor/256x256/apps)
