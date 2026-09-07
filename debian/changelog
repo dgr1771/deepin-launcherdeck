@@ -1,3 +1,10 @@
+deepin-launcherdeck (0.9.5-1) unstable; urgency=medium
+
+  * 新增「关于唤启」弹窗（DAboutDialog 标准关于框）：托盘菜单入口
+  * 程序内署名开发者：隔壁村布布；GPL-3.0 授权与 GitHub 仓库链接
+
+ -- dgr <dgr1771@users.noreply.github.com>  Mon, 07 Sep 2026 22:25:00 +0800
+
 deepin-launcherdeck (0.9.4-1) unstable; urgency=medium
 
   * 打包规范修正（lintian --pedantic 复核）：

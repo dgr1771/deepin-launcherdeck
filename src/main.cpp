@@ -1,3 +1,4 @@
+#include <DAboutDialog>
 #include <DApplication>
 #include <QFile>
 #include <QGuiApplication>
@@ -64,7 +65,7 @@ int main(int argc, char *argv[]) {
     DApplication app(argc, argv);
     app.setOrganizationName("dgr");
     app.setApplicationName("deepin-launcherdeck");
-    app.setApplicationVersion("0.9.3");
+    app.setApplicationVersion("0.9.5");
     // 图标主题兜底：bloom 缺系统图标（如 user-trash 只在 hazy-color），缺名时回退查 hazy-color
     QIcon::setFallbackThemeName(QStringLiteral("hazy-color"));
     app.setWindowIcon(trayIcon());   // 窗口图标与托盘/桌面同源
@@ -80,6 +81,26 @@ int main(int argc, char *argv[]) {
     if (qEnvironmentVariableIsSet("DECK_DEBUG_FORTUNE"))   // 今日一抽弹层联测
         QTimer::singleShot(400, &panel, [&panel] { panel.show(); panel.showFortune(); });
 
+    // 关于弹窗（DTK 惯例：自建 DAboutDialog 后 setAboutDialog 交接，
+    // 之后 aboutDialog() 才返回有效指针；直接调 aboutDialog() 未设时为 nullptr）
+    DAboutDialog *about = new DAboutDialog();
+    app.setAboutDialog(about);
+    about->setWindowTitle(QStringLiteral("关于唤启"));
+    about->setProductIcon(trayIcon());
+    about->setProductName(QStringLiteral("唤启 Launcher Deck"));
+    about->setVersion(QStringLiteral("版本 0.9.5"));
+    about->setDescription(
+        QStringLiteral("所有应用，一屏全览，一唤即启。\n开发者：隔壁村布布"));
+    about->setLicense(QStringLiteral(
+        "本程序为自由软件，基于 GPL-3.0-or-later 授权发布，可自由使用、修改与分发。"));
+    about->setWebsiteName(QStringLiteral("dgr1771/deepin-launcherdeck"));
+    about->setWebsiteLink(QStringLiteral("https://github.com/dgr1771/deepin-launcherdeck"));
+    if (qEnvironmentVariableIsSet("DECK_DEBUG_ABOUT")) {   // 关于弹窗联测
+        about->show();
+        about->raise();
+        about->activateWindow();
+    }
+
     // 托盘：左键/菜单展开
     auto *tray = new QSystemTrayIcon(trayIcon(), &app);
     tray->setToolTip(QStringLiteral("唤启 · Ctrl+J 唤起"));
@@ -91,6 +112,13 @@ int main(int argc, char *argv[]) {
                             QSystemTrayIcon::Information, 1500);
     });
     menu->addSeparator();
+    menu->addAction(QStringLiteral("关于唤启"), &app, [&app] {
+        auto *dlg = app.aboutDialog();
+        if (!dlg) return;
+        dlg->show();
+        dlg->raise();
+        dlg->activateWindow();
+    });
     menu->addAction(QStringLiteral("退出"), &app, &QApplication::quit);
     tray->setContextMenu(menu);
     QObject::connect(tray, &QSystemTrayIcon::activated, &app,
