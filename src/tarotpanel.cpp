@@ -78,7 +78,7 @@ struct AppearancePreset {
 };
 
 static const AppearancePreset APPEARANCE_PRESETS[] = {
-    {"应用牌堆 · 深蓝紫", QColor(21, 26, 49), QColor(35, 43, 82), QColor(139, 124, 246)},
+    {"唤启 · 深蓝紫", QColor(21, 26, 49), QColor(35, 43, 82), QColor(139, 124, 246)},
     {"极夜星芒 · 冷蓝",   QColor(10, 18, 38), QColor(18, 34, 68), QColor(96, 165, 250)},
     {"琥珀复古 · 暖金",   QColor(45, 28, 28), QColor(72, 45, 31), QColor(245, 190, 92)},
     {"清透雾面 · 浅色",   QColor(192, 205, 228), QColor(151, 169, 204), QColor(100, 116, 139)},
@@ -86,9 +86,14 @@ static const AppearancePreset APPEARANCE_PRESETS[] = {
 };
 
 TarotPanel::TarotPanel(QWidget *parent)
-    : QWidget(parent, Qt::Tool | Qt::FramelessWindowHint | Qt::WindowStaysOnTopHint)
+    : DBlurEffectWidget(parent)
 {
+    // deepin-skills/dtk-development: DBlurEffectWidget + BehindWindowBlend = 系统级真毛玻璃
+    setWindowFlags(Qt::Tool | Qt::FramelessWindowHint | Qt::WindowStaysOnTopHint);
     setAttribute(Qt::WA_TranslucentBackground);
+    setBlendMode(DBlurEffectWidget::BehindWindowBlend);
+    setRadius(30);
+    setMaskColor(DBlurEffectWidget::AutoColor);
     setObjectName(QStringLiteral("panel"));
     loadAppearance();
     buildUi();
@@ -101,7 +106,7 @@ void TarotPanel::buildUi() {
     root->setSpacing(8);
 
     // 标题区（deepin 原生排版：主标题 + 状态行）
-    auto *title = new QLabel(QStringLiteral("✦ 应用牌堆"), this);
+    auto *title = new QLabel(QStringLiteral("✦ 唤启"), this);
     title->setStyleSheet("color: #f4f7ff; font-size: 19px; font-weight: 700; letter-spacing: 5px; background: transparent;");
     m_subLbl = new QLabel(QStringLiteral("正在召集本机程序…"), this);
     m_subLbl->setStyleSheet("color: rgba(204,213,238,0.68); font-size: 11px; letter-spacing: 1px; background: transparent;");
@@ -341,13 +346,13 @@ void TarotPanel::refresh() {
     QSettings *s = usageStore();
     for (AppEntry &a : m_apps)
         a.count = s->value(QStringLiteral("usage/") + a.name).toUInt();
-    // 游戏模式不重建牌阵（FCard 存名字符串，重扫不破坏牌局；省一份隐藏网格的 CPU）
+    // 游戏模式不重建网格（FCard 存名字符串，重扫不破坏牌局；省一份隐藏网格的 CPU）
     if (!gameMode) rebuildGrid(m_search->text());
     rebuildChips();
     if (m_subLbl) {
         quint32 usedN = 0;
         for (const AppEntry &a : std::as_const(m_apps)) if (a.count > 0) usedN++;
-        m_subLbl->setText(QStringLiteral("本机 %1 款程序入阵 · 已启用 %2 款 · 常用自动浮前 · 零输入 — 翻牌即达")
+        m_subLbl->setText(QStringLiteral("本机 %1 款程序 · 已启用 %2 款 · 常用自动浮前 · 零输入 — 点开即达")
                               .arg(m_apps.size()).arg(usedN));
     }
 }
@@ -547,7 +552,7 @@ void TarotPanel::showReading(const AppEntry &a, const QRect &cardRect) {
     const QString suit = suitOf(a);
     const QString div = suitDivination(suit);
     m_reading->setText(QStringLiteral(
-        "<div style='color:#ffd782; font-size:12px; letter-spacing:1px;'>%1 %2 · 塔罗解读</div>"
+        "<div style='color:#ffd782; font-size:12px; letter-spacing:1px;'>%1 %2 · 卡片解读</div>"
         "<div style='font-size:15px; font-weight:600; margin:4px 0 2px;'>%3</div>"
         "<div style='font-size:11px; color:rgba(255,255,255,0.55);'>%4</div>"
         "<div style='font-size:12px; color:rgba(255,255,255,0.85); margin-top:6px; width: 220px;'>✦ %5</div>")
@@ -709,7 +714,7 @@ void TarotPanel::ensureGame() {
 }
 
 void TarotPanel::updateGameChrome() {
-    m_modeBtn->setText((gameMode || slotMode) ? QStringLiteral("🃏 塔罗牌阵") : QStringLiteral("🎮 空当接龙"));
+    m_modeBtn->setText((gameMode || slotMode) ? QStringLiteral("🃏 应用一屏") : QStringLiteral("🎮 空当接龙"));
     m_newBtn->setVisible(gameMode);
     m_difficultyBox->setVisible(gameMode);
     m_moveLbl->setVisible(gameMode);
@@ -925,7 +930,7 @@ void TarotPanel::launchApp(const AppEntry &a) {
 
 void TarotPanel::toggle() {
     if (isVisible()) { hide(); return; }
-    refresh();   // 唤起即重扫（win 版 onShown→loadApps 同款：新装应用即时入阵）
+    refresh();   // 唤起即重扫（win 版 onShown→loadApps 同款：新装应用即时收录）
     QRect av = QGuiApplication::primaryScreen()->availableGeometry();
     move(av.center() - rect().center());
     show();

@@ -1,6 +1,8 @@
-// 塔罗牌阵面板：无边框半透明圆角窗 + 搜索 + 牌阵网格 + 失焦自动收起
+﻿// 塔罗牌阵面板：无边框半透明圆角窗 + 搜索 + 牌阵网格 + 失焦自动收起
 #pragma once
-#include <QWidget>
+#include <DBlurEffectWidget>
+
+DWIDGET_USE_NAMESPACE
 #include "appscanner.h"
 #include "freecell.h"
 #include "slotmachine.h"
@@ -15,7 +17,7 @@ class QLabel;
 class QButtonGroup;
 class QComboBox;
 
-class TarotPanel : public QWidget {
+class TarotPanel : public DBlurEffectWidget {
     Q_OBJECT
 public:
     explicit TarotPanel(QWidget *parent = nullptr);
@@ -27,7 +29,7 @@ public:
 protected:
     bool event(QEvent *e) override;          // 失焦 → 延迟收起
     bool eventFilter(QObject *obj, QEvent *e) override; // 牌的点击 → 启动
-    void paintEvent(QPaintEvent *e) override; // 圆角毛玻璃底
+    void paintEvent(QPaintEvent *e) override; // 圆角描边（底色由 DBlurEffectWidget 提供）
     void mousePressEvent(QMouseEvent *e) override;
     void resizeEvent(QResizeEvent *e) override;   // 尺寸变化 → 防抖重排牌阵
 

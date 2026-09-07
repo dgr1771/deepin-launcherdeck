@@ -43,7 +43,7 @@ int main(int argc, char *argv[]) {
         return FCLogic::runSelfTest();
     }
 
-    // DDE 25 可能默认 wayland：全局热键 XGrabKey 与牌阵置顶都依赖 X11（看板同款决策）
+    // DDE 25 可能默认 wayland：全局热键 XGrabKey 与窗口置顶都依赖 X11（看板同款决策）
     qputenv("QT_QPA_PLATFORM", "xcb");
     qputenv("DSG_APP_ID", "org.dgr.launcherdeck");
 
@@ -53,8 +53,8 @@ int main(int argc, char *argv[]) {
     app.setApplicationVersion("0.6.2");
     // 图标主题兜底：bloom 缺系统图标（如 user-trash 只在 hazy-color），缺名时回退查 hazy-color
     QIcon::setFallbackThemeName(QStringLiteral("hazy-color"));
-    app.setProductName(QStringLiteral("应用牌堆"));
-    app.setApplicationDescription(QStringLiteral("托盘常驻 + 全局热键的塔罗牌阵应用启动器（DTK 原生版）"));
+    app.setProductName(QStringLiteral("唤启"));
+    app.setApplicationDescription(QStringLiteral("托盘常驻 + 全局热键的应用一屏启动器（DTK 原生版）"));
     app.loadTranslator();
     if (!app.setSingleInstance(QStringLiteral("deepin-launcherdeck"))) return 0;
 
@@ -67,12 +67,12 @@ int main(int argc, char *argv[]) {
 
     // 托盘：左键/菜单展开
     auto *tray = new QSystemTrayIcon(drawTrayIcon(), &app);
-    tray->setToolTip(QStringLiteral("应用牌堆 · Ctrl+J 唤起"));
+    tray->setToolTip(QStringLiteral("唤启 · Ctrl+J 唤起"));
     auto *menu = new QMenu();
-    menu->addAction(QStringLiteral("展开牌堆（Ctrl+J）"), &panel, [this_ = &panel] { this_->toggle(); });
+    menu->addAction(QStringLiteral("展开应用一屏（Ctrl+J）"), &panel, [this_ = &panel] { this_->toggle(); });
     menu->addAction(QStringLiteral("重新扫描本机应用"), &panel, [this_ = &panel, tray_ = tray] {
         this_->refresh();
-        tray_->showMessage(QStringLiteral("应用牌堆"), QStringLiteral("已重新扫描本机应用"),
+        tray_->showMessage(QStringLiteral("唤启"), QStringLiteral("已重新扫描本机应用"),
                             QSystemTrayIcon::Information, 1500);
     });
     menu->addSeparator();
