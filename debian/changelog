@@ -1,3 +1,10 @@
+deepin-launcherdeck (0.9.3-2) unstable; urgency=medium
+
+  * 修：启动器/任务栏仍显示旧图——desktop Icon 改绝对路径，绕开 dde-shell
+    进程内按图标名缓存的旧 QPixmap（长驻进程不重启即可生效）
+
+ -- dgr <dgr@dgr-PC>  Mon, 07 Sep 2026 21:40:00 +0800
+
 deepin-launcherdeck (0.9.3-1) unstable; urgency=medium
 
   * 更名「唤启」：窗口标题/托盘提示/.desktop 全部去塔罗话术
