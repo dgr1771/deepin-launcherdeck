@@ -42,6 +42,13 @@ find_package(X11 REQUIRED)
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(XCB REQUIRED IMPORTED_TARGET xcb)   # 全局热键的独立 xcb 连接
 
+message("FACTS: Qt6_FOUND=${Qt6_FOUND} Qt5Core_DIR=${Qt5Core_DIR}")
+message("FACTS: DECK_QT_LIBS=[${DECK_QT_LIBS}]")
+if (NOT TARGET Qt5::Core)
+    message("FACTS: Qt5::Core TARGET MISSING AT CONFIGURE")
+else()
+    message("FACTS: Qt5::Core TARGET EXISTS AT CONFIGURE")
+endif()
 add_executable(deepin-launcherdeck
     src/main.cpp
     src/appscanner.cpp
@@ -63,3 +70,8 @@ ${DECK_QT_LIBS}
 install(TARGETS deepin-launcherdeck RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
 install(FILES data/deepin-launcherdeck.desktop DESTINATION ${CMAKE_INSTALL_DATADIR}/applications)
 install(FILES assets/deepin-launcherdeck.png DESTINATION ${CMAKE_INSTALL_DATADIR}/icons/hicolor/256x256/apps)
+
+get_target_property(_am deepin-launcherdeck AUTOMOC)
+message("AUTOMOC_CHECK: target AUTOMOC = ${_am}")
+get_directory_property(_dirvars COMPILE_DEFINITIONS)
+message("DIR_DEFS: ${_dirvars}")
