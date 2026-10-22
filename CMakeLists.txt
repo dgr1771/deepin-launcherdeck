@@ -39,6 +39,7 @@ set(CMAKE_AUTOMOC ON)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)   # UOS Qt5 -reduce-relocations 要求 -fPIC
 add_compile_options(-fPIC)   # 双保险
 
+find_package(Threads REQUIRED)
 find_package(X11 REQUIRED)
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(XCB REQUIRED IMPORTED_TARGET xcb)   # 全局热键的独立 xcb 连接
@@ -66,6 +67,7 @@ ${DECK_QT_LIBS}
     ${DECK_DTK_LIBS}
     ${X11_LIBRARIES}
     PkgConfig::XCB
+    Threads::Threads
 )
 
 install(TARGETS deepin-launcherdeck RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
