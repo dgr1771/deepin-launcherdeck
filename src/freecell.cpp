@@ -9,6 +9,7 @@
 #include <algorithm>
 #include <cmath>
 #include <random>
+#include <QtMath>
 
 namespace FCLogic {
 

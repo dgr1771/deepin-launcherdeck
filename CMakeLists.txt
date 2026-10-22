@@ -6,8 +6,19 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_AUTOMOC ON)
 include(GNUInstallDirs)
 
-find_package(Qt6 REQUIRED COMPONENTS Core Gui Widgets)
-find_package(Dtk6 REQUIRED COMPONENTS Core Gui Widget)
+# Qt6/DTK6（deepin 25）优先，回退 Qt5/DTK5（UOS 专业版 eagle）
+find_package(Qt6 QUIET COMPONENTS Core Gui Widgets)
+if (Qt6_FOUND)
+    find_package(Dtk6 REQUIRED COMPONENTS Core Gui Widget)
+    set(DECK_QT_LIBS Qt6::Core Qt6::Gui Qt6::Widgets)
+    set(DECK_DTK_LIBS Dtk6::Core Dtk6::Gui Dtk6::Widget)
+else()
+    find_package(Qt5 REQUIRED COMPONENTS Core Gui Widgets)
+    find_package(Dtk REQUIRED COMPONENTS Core Gui Widget)
+    set(DECK_QT_LIBS Qt5::Core Qt5::Gui Qt5::Widgets)
+    set(DECK_DTK_LIBS Dtk::Core Dtk::Gui Dtk::Widget)
+    add_compile_definitions(DECK_QT5)
+endif()
 find_package(X11 REQUIRED)
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(XCB REQUIRED IMPORTED_TARGET xcb)   # 全局热键的独立 xcb 连接
@@ -25,8 +36,8 @@ add_executable(deepin-launcherdeck
 
 target_include_directories(deepin-launcherdeck PRIVATE ${X11_INCLUDE_DIR})
 target_link_libraries(deepin-launcherdeck PRIVATE
-    Qt6::Core Qt6::Gui Qt6::Widgets
-    Dtk6::Core Dtk6::Gui Dtk6::Widget
+${DECK_QT_LIBS}
+    ${DECK_DTK_LIBS}
     ${X11_LIBRARIES}
     PkgConfig::XCB
 )

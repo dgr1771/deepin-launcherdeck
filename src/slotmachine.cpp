@@ -6,6 +6,7 @@
 #include <QRandomGenerator>
 #include <QDateTime>
 #include <QTimer>
+#include <QtMath>
 
 SlotMachineBoard::SlotMachineBoard(QWidget *parent) : QWidget(parent) {
     setAttribute(Qt::WA_TranslucentBackground);

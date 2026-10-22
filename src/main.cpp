@@ -67,7 +67,9 @@ int main(int argc, char *argv[]) {
     app.setApplicationName("deepin-launcherdeck");
     app.setApplicationVersion("0.9.5");
     // 图标主题兜底：bloom 缺系统图标（如 user-trash 只在 hazy-color），缺名时回退查 hazy-color
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
     QIcon::setFallbackThemeName(QStringLiteral("hazy-color"));
+#endif
     app.setWindowIcon(trayIcon());   // 窗口图标与托盘/桌面同源
     app.setProductName(QStringLiteral("唤启"));
     app.setApplicationDescription(QStringLiteral("托盘常驻 + 全局热键的应用一屏启动器（DTK 原生版）"));

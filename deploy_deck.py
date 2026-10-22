@@ -15,10 +15,10 @@ deepin-launcherdeck（应用牌堆 DTK 版）—— 远程部署/测试助手
 import sys, os, argparse
 
 HOST = "192.168.1.54"
-USER = "dgr"
+USER = "uos"
 PASS = "1"
 LOCAL_ROOT = os.path.dirname(os.path.abspath(__file__))
-REMOTE_ROOT = "/home/dgr/deepin-launcherdeck"
+REMOTE_ROOT = "/home/uos/deepin-launcherdeck"
 DISPLAY = ":0"
 BIN = "deepin-launcherdeck"
 BIN_TRUNC = BIN[:15]          # Linux comm 名 15 字符截断

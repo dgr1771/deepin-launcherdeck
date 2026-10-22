@@ -14,6 +14,7 @@
 #include <QCheckBox>
 #include <QRegularExpression>
 #include <QFileInfo>
+#include <QScreen>
 #include <QEvent>
 #include <QFile>
 #include <QFrame>
