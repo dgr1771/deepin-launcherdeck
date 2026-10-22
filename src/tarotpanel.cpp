@@ -605,7 +605,9 @@ void TarotPanel::showUpgradeCenter() {
     auto *listBox = new QWidget(scroll);
     listBox->setObjectName(QStringLiteral("updList"));
     listBox->setPalette(dlgPal);
+    listBox->setAutoFillBackground(true);        // 无此行 QWidget 不刷背景（浅色调色板透出）
     scroll->viewport()->setPalette(dlgPal);
+    scroll->viewport()->setAutoFillBackground(true);
     auto *listLay = new QVBoxLayout(listBox);
     listLay->setContentsMargins(6, 2, 6, 2);
     listLay->setSpacing(2);
