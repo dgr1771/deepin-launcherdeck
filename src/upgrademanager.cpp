@@ -47,8 +47,7 @@ UpgradeManager::UpgradeManager(QObject *parent) : QObject(parent) {}
 
 void UpgradeManager::checkUpgrades(bool force) {
     if (m_busy) {
-        fprintf(stderr, "[UM] skip busy
-");
+        fprintf(stderr, "[UM] skip busy\n");
         return;
     }
     const qint64 now = QDateTime::currentMSecsSinceEpoch();
@@ -57,8 +56,7 @@ void UpgradeManager::checkUpgrades(bool force) {
         return;   // 缓存期内直接回上次结果
     }
     m_busy = true;
-    fprintf(stderr, "[UM] check called, running apt in background thread
-");
+    fprintf(stderr, "[UM] check called, running apt in background thread\n");
     std::thread([this] {
         const QString out = popenRead(QStringLiteral("apt list --upgradable 2>/dev/null"));
         QList<UpgradeItem> list;
@@ -72,8 +70,7 @@ void UpgradeManager::checkUpgrades(bool force) {
                 list.append(full);
             }
         }
-        fprintf(stderr, "[UM] apt parsed: %d
-", (int)list.size());
+        fprintf(stderr, "[UM] apt parsed: %d\n", (int)list.size());
 
         // 二段：批量查每个包提供的 .desktop（一次 bash 调用）
         if (!list.isEmpty()) {
@@ -94,8 +91,7 @@ void UpgradeManager::checkUpgrades(bool force) {
             m_items = list;
             m_lastCheckMs = QDateTime::currentMSecsSinceEpoch();
             m_busy = false;
-            fprintf(stderr, "[UM] resolved: %d items
-", (int)m_items.size());
+            fprintf(stderr, "[UM] resolved: %d items\n", (int)m_items.size());
             emit checked(m_items);
         }, Qt::QueuedConnection);
     }).detach();
@@ -115,8 +111,7 @@ void UpgradeManager::upgradePackages(const QStringList &packages) {
         char buf[4096];
         while (fp && fgets(buf, sizeof buf, fp)) out += QString::fromUtf8(buf);
         const int code = fp ? ::pclose(fp) : -1;
-        fprintf(stderr, "[UM] upgrade pclose code: %d
-", code);
+        fprintf(stderr, "[UM] upgrade pclose code: %d\n", code);
 
         // 退出码非零≠失败（下载波折也可能非零）——复核清单定性：包消失 = 实际已升级
         bool ok = (code == 0);
