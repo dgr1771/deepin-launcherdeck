@@ -1,6 +1,7 @@
 #include "upgrademanager.h"
 
 #include <QDateTime>
+#include <QDebug>
 #include <QProcess>
 #include <QRegularExpression>
 
