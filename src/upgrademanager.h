@@ -1,10 +1,10 @@
 // 应用升级管理（deepin）：apt 数据源 + pkexec 静默批量升级
-// 对应 Windows 版的 winget 集成——deepin 上更新通道是 apt 仓库，
-// 升级需 root，走 pkexec 弹系统授权框（一次授权可带一串包）
+// 实现注记：UOS eagle 的 DTK5/Qt5.11 环境下 QProcess 异步信号偶发不触发
+// （finished 不回调、事件循环无感知），故全部 I/O 走 popen + 后台线程 +
+// QMetaObject::invokeMethod 队列回主线程，不依赖任何信号机制。
 #pragma once
 
 #include <QObject>
-#include <QProcess>
 #include <QList>
 
 struct UpgradeItem {
@@ -33,12 +33,7 @@ signals:
     void upgradeFinished(bool ok, const QString &detail);
 
 private:
-    void runAptList(bool force);
-    void resolveDesktopFiles();
-
-    QProcess *m_proc = nullptr;
-    QList<UpgradeItem> m_items;     // 已解析 desktopFile 的最终列表
-    QList<UpgradeItem> m_pending;   // apt 解析完、待匹配 desktop 的中间态
+    QList<UpgradeItem> m_items;
     qint64 m_lastCheckMs = 0;
     bool m_busy = false;
 };
