@@ -3,7 +3,6 @@ project(deepin-launcherdeck VERSION 0.1.0 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(CMAKE_AUTOMOC ON)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)   # UOS Qt5 -reduce-relocations 要求 -fPIC
 add_compile_options(-fPIC)   # 双保险：POSITION_INDEPENDENT_CODE 在部分老 cmake 组合下不传导
 include(GNUInstallDirs)
@@ -35,6 +34,9 @@ else()
     endforeach()
     add_compile_definitions(DECK_QT5)
 endif()
+set(CMAKE_AUTOMOC ON)
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)   # UOS Qt5 -reduce-relocations 要求 -fPIC
+add_compile_options(-fPIC)   # 双保险
 
 find_package(X11 REQUIRED)
 find_package(PkgConfig REQUIRED)
