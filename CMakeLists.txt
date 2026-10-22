@@ -29,6 +29,10 @@ else()
                         ${DECK_DTKCORE_INCLUDE_DIRS} ${DECK_DTKGUI_INCLUDE_DIRS} ${DECK_DTKWIDGET_INCLUDE_DIRS})
     add_compile_options(${DECK_QT5CORE_CFLAGS_OTHER} ${DECK_QT5GUI_CFLAGS_OTHER} ${DECK_QT5WID_CFLAGS_OTHER}
                         ${DECK_DTKCORE_CFLAGS_OTHER} ${DECK_DTKGUI_CFLAGS_OTHER} ${DECK_DTKWIDGET_CFLAGS_OTHER})
+    foreach(d ${Qt5Core_DEFINITIONS} ${Qt5Gui_DEFINITIONS} ${Qt5Widgets_DEFINITIONS})
+        string(REGEX REPLACE "^-D" "" d2 "${d}")
+        add_compile_definitions(${d2})
+    endforeach()
     add_compile_definitions(DECK_QT5)
 endif()
 
