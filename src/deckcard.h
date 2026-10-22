@@ -10,6 +10,8 @@ class DeckCard : public QWidget {
 public:
     explicit DeckCard(const AppEntry &a, QWidget *parent = nullptr);
     void setIconPixmap(const QPixmap &pix) { m_icon = pix; update(); }
+    void setUpgradable(bool on) { if (m_upgradable != on) { m_upgradable = on; update(); } }
+    bool upgradable() const { return m_upgradable; }
     const AppEntry &entry() const { return m_app; }
 
 protected:
@@ -26,4 +28,5 @@ private:
     QVariantAnimation *m_flip = nullptr;   // 0..1 翻面动画（牌背→牌面）
     qreal m_liftVal = 0.0;
     qreal m_flipVal = 0.0;
+    bool m_upgradable = false;   // 有新版本：右上角红点提示
 };

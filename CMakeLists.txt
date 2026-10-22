@@ -20,6 +20,7 @@ add_executable(deepin-launcherdeck
     src/slotmachine.cpp
     src/globalhotkey.cpp
     src/tarotpanel.cpp
+    src/upgrademanager.cpp
 )
 
 target_include_directories(deepin-launcherdeck PRIVATE ${X11_INCLUDE_DIR})

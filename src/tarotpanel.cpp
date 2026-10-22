@@ -1,5 +1,6 @@
 #include "tarotpanel.h"
 #include "deckcard.h"
+#include "upgrademanager.h"
 #include "flowlayout.h"
 #include <algorithm>
 #include <QButtonGroup>
@@ -10,6 +11,9 @@
 #include <QDateTime>
 #include <QDesktopServices>
 #include <QDialog>
+#include <QCheckBox>
+#include <QRegularExpression>
+#include <QFileInfo>
 #include <QEvent>
 #include <QFile>
 #include <QFrame>
@@ -170,7 +174,34 @@ void TarotPanel::buildUi() {
     m_appearanceBtn->setStyleSheet(btnQss);
     connect(m_appearanceBtn, &QPushButton::clicked, this, [this] { showAppearanceDialog(); });
     top->addWidget(m_appearanceBtn);
+    // ⬆ 应用升级中心（有可升级项时显示，角标=数量）
+    m_updBtn = new QPushButton(this);
+    m_updBtn->setCursor(Qt::PointingHandCursor);
+    m_updBtn->setStyleSheet(QStringLiteral(
+        "QPushButton { color: #ffd782; border: 1px solid rgba(229,72,77,0.65);"
+        "  border-radius: 14px; padding: 5px 14px; font-size: 12px; background: rgba(229,72,77,0.16); font-weight: 700; }"
+        "QPushButton:hover { background: rgba(229,72,77,0.32); }"));
+    m_updBtn->hide();
+    connect(m_updBtn, &QPushButton::clicked, this, [this] { showUpgradeCenter(); });
+    top->addWidget(m_updBtn);
     root->addLayout(top);
+    // 升级管理器：启动后 3s 后台查一次（QProcess 异步不卡面板），6h 缓存
+    m_updMgr = new UpgradeManager(this);
+    connect(m_updMgr, &UpgradeManager::checked, this, [this](const QList<UpgradeItem> &items) {
+        Q_UNUSED(items);
+        applyUpgradeDots();
+        const int n = m_updMgr->items().size();
+        if (n > 0) {
+            m_updBtn->setText(QStringLiteral("⬆ 升级 %1").arg(n));
+            m_updBtn->show();
+        } else {
+            m_updBtn->hide();
+        }
+    });
+    connect(m_updMgr, &UpgradeManager::upgradeProgress, this, [this](const QString &line) {
+        m_updBtn->setText(line.left(18));
+    });
+    QTimer::singleShot(3000, this, [this] { m_updMgr->checkUpgrades(false); });
 
     // 牌意解读浮层（悬停 450ms 触发）
     m_reading = new QLabel(this);
@@ -505,6 +536,141 @@ void TarotPanel::removeCustomCat(const QString &id) {
     }
 }
 
+// ---- 应用升级（apt 数据源） ----
+QString TarotPanel::upgradeNewVersionFor(const AppEntry &a) const {
+    if (!m_updMgr) return QString();
+    const QString df = QFileInfo(a.desktopPath).fileName();
+    for (const UpgradeItem &it : m_updMgr->items()) {
+        if (!it.desktopFile.isEmpty() && QFileInfo(it.desktopFile).fileName() == df)
+            return it.newVersion;
+    }
+    // 兜底：包名与显示名归一化比对（部分包的 .desktop 不在包内列出）
+    auto norm = [](QString s) { s = s.toLower().remove(QRegularExpression("[\s._-]")); return s; };
+    const QString na = norm(a.name);
+    if (na.length() < 3) return QString();
+    for (const UpgradeItem &it : m_updMgr->items()) {
+        const QString nu = norm(it.package);
+        if (nu.length() < 3) continue;
+        if (na == nu || ((na.contains(nu) || nu.contains(na)) && nu.length() >= 4)) return it.newVersion;
+    }
+    return QString();
+}
+
+void TarotPanel::applyUpgradeDots() {
+    // 卡片在 m_grid/m_topGrid 两个布局里，统一遍历 DeckCard 子控件刷状态
+    const auto cards = this->findChildren<DeckCard *>();
+    for (DeckCard *card : cards)
+        card->setUpgradable(!upgradeNewVersionFor(card->entry()).isEmpty());
+}
+
+void TarotPanel::showUpgradeCenter() {
+    const QList<UpgradeItem> items = m_updMgr ? m_updMgr->items() : QList<UpgradeItem>();
+    if (items.isEmpty()) return;
+    QDialog dlg(this);
+    dlg.setWindowTitle(QStringLiteral("应用升级中心"));
+    dlg.setModal(false);
+    dlg.resize(520, 460);
+    dlg.setStyleSheet(QStringLiteral(
+        "QDialog { background: #1b2340; color: #eef2ff; }"
+        "QLabel { color: #eef2ff; }"
+        "QCheckBox { color: #eef2ff; font-size: 13px; spacing: 8px; }"
+        "QCheckBox::indicator { width: 15px; height: 15px; }"
+        "QPushButton { color: #ffd782; border: 1px solid rgba(255,215,130,0.6); border-radius: 14px;"
+        "  padding: 6px 18px; font-size: 13px; font-weight: 700; background: rgba(255,215,130,0.12); }"
+        "QPushButton:hover { background: rgba(255,215,130,0.26); }"
+        "QPushButton:disabled { color: rgba(238,242,255,0.5); border-color: rgba(255,255,255,0.2); background: transparent; }"
+        "QScrollArea { border: none; background: transparent; }"));
+    auto *lay = new QVBoxLayout(&dlg);
+    auto *title = new QLabel(QStringLiteral("⬆ 应用升级中心 · %1 个可升级").arg(items.size()));
+    title->setStyleSheet(QStringLiteral("font-size: 15px; font-weight: 700; color: #ffd782;"));
+    lay->addWidget(title);
+
+    auto *scroll = new QScrollArea(&dlg);
+    scroll->setWidgetResizable(true);
+    auto *listBox = new QWidget(scroll);
+    auto *listLay = new QVBoxLayout(listBox);
+    listLay->setContentsMargins(6, 2, 6, 2);
+    listLay->setSpacing(2);
+    struct Row { QCheckBox *cb; UpgradeItem it; };
+    QList<Row> rows;
+    for (const UpgradeItem &it : items) {
+        // 找到对应应用卡显示名（匹配不到就显示包名）
+        QString disp = it.package;
+        const QString df = QFileInfo(it.desktopFile).fileName();
+        for (const AppEntry &a : std::as_const(m_apps))
+            if (QFileInfo(a.desktopPath).fileName() == df) { disp = a.name; break; }
+        auto *cb = new QCheckBox(QStringLiteral("%1　%2 → ")
+                                     .arg(disp, it.oldVersion.isEmpty() ? QStringLiteral("?") : it.oldVersion), listBox);
+        cb->setProperty("pkg", it.package);
+        cb->setChecked(true);
+        auto *nv = new QLabel(QStringLiteral("<b>%1</b>").arg(it.newVersion), listBox);
+        nv->setStyleSheet(QStringLiteral("color: #ffd782; font-weight: 700;"));
+        auto *h = new QHBoxLayout(); h->setContentsMargins(0, 0, 0, 0);
+        h->addWidget(cb); h->addStretch(); h->addWidget(nv);
+        auto *wrap = new QWidget(listBox); wrap->setLayout(h);
+        listLay->addWidget(wrap);
+        rows.append({ cb, it });
+    }
+    listLay->addStretch();
+    scroll->setWidget(listBox);
+    lay->addWidget(scroll, 1);
+
+    auto *bar = new QHBoxLayout();
+    auto *allCb = new QCheckBox(QStringLiteral("全选"), &dlg);
+    allCb->setChecked(true);
+    auto *hint = new QLabel(QStringLiteral("静默升级 · 系统级安装会弹授权框，请输入密码确认"));
+    hint->setStyleSheet(QStringLiteral("color: rgba(238,242,255,0.45); font-size: 11.5px;"));
+    bar->addWidget(allCb); bar->addStretch(); bar->addWidget(hint);
+    lay->addLayout(bar);
+
+    auto *btns = new QHBoxLayout();
+    btns->addStretch();
+    auto *closeBtn = new QPushButton(QStringLiteral("关 闭"), &dlg);
+    auto *goBtn = new QPushButton(QStringLiteral("一键升级所选 (%1)").arg(rows.size()), &dlg);
+    btns->addWidget(closeBtn); btns->addWidget(goBtn);
+    lay->addLayout(btns);
+
+    auto *status = new QLabel(QString(), &dlg);
+    status->setStyleSheet(QStringLiteral("color: rgba(238,242,255,0.7); font-size: 12px;"));
+    status->setWordWrap(true);
+    lay->addWidget(status);
+
+    auto syncN = [goBtn, &dlg, rows]() {
+        int n = 0;
+        for (const auto &r : rows) if (r.cb->isChecked()) n++;
+        goBtn->setText(QStringLiteral("一键升级所选 (%1)").arg(n));
+    };
+    QObject::connect(allCb, &QCheckBox::toggled, &dlg, [rows, syncN](bool on) {
+        for (const auto &r : rows) r.cb->setChecked(on);
+        syncN();
+    });
+    for (const auto &r : rows)
+        QObject::connect(r.cb, &QCheckBox::toggled, &dlg, syncN);
+    QObject::connect(closeBtn, &QPushButton::clicked, &dlg, &QDialog::reject);
+    QObject::connect(goBtn, &QPushButton::clicked, &dlg, [this, &dlg, &goBtn, &status, rows]() {
+        QStringList pkgs;
+        for (const auto &r : rows) if (r.cb->isChecked()) pkgs << r.it.package;
+        if (pkgs.isEmpty()) return;
+        goBtn->setEnabled(false);
+        status->setText(QStringLiteral("升级中…（授权框请输入密码）"));
+        m_updMgr->upgradePackages(pkgs);
+    });
+    // 进度/完成桥接到对话框（对话框存续期内有效）
+    QObject::connect(m_updMgr, &UpgradeManager::upgradeProgress, &dlg, [&status](const QString &l) {
+        status->setText(l);
+    });
+    QObject::connect(m_updMgr, &UpgradeManager::upgradeFinished, &dlg, [&dlg, &status, this](bool ok, const QString &detail) {
+        status->setText(ok ? QStringLiteral("✓ 全部升级完成，红点已刷新") : QStringLiteral("✗ ") + detail);
+        applyUpgradeDots();
+        const int n = m_updMgr ? m_updMgr->items().size() : 0;
+        if (n > 0) { m_updBtn->setText(QStringLiteral("⬆ 升级 %1").arg(n)); m_updBtn->show(); }
+        else m_updBtn->hide();
+        if (ok) QTimer::singleShot(1200, &dlg, &QDialog::accept);
+    });
+
+    dlg.exec();
+}
+
 void TarotPanel::showCatMenu(const AppEntry &a, const QPoint &globalPos) {
     QMenu m(this);
     m.setStyleSheet(QStringLiteral(
@@ -532,11 +698,18 @@ void TarotPanel::showCatMenu(const AppEntry &a, const QPoint &globalPos) {
     m.addSeparator();
     QAction *autoAct = m.addAction(QStringLiteral("↩ 恢复自动归类"));
     autoAct->setData(QStringLiteral("__auto__"));
+    const QString newVer = upgradeNewVersionFor(a);
+    if (!newVer.isEmpty()) {
+        m.addSeparator();
+        QAction *upd = m.addAction(QStringLiteral("⬆ 升级到 v%1（打开升级中心）").arg(newVer));
+        upd->setData(QStringLiteral("__upgrade__"));
+    }
     m.addSeparator();
     QAction *launch = m.addAction(QStringLiteral("🚀 立即启动"));
 
     QAction *sel = m.exec(globalPos);
     if (!sel) return;
+    if (sel->data().toString() == QLatin1String("__upgrade__")) { showUpgradeCenter(); return; }
     if (sel == launch) { launchApp(a); return; }
     if (sel->data().toString() == QLatin1String("__auto__"))
         usageStore()->remove(QStringLiteral("custom/") + a.name);
@@ -859,6 +1032,7 @@ void TarotPanel::rebuildGrid(const QString &filter) {
                        : QIcon::fromTheme(a.icon, QIcon::fromTheme(QStringLiteral("application-x-executable")));
         if (ic.isNull()) ic = QIcon::fromTheme(QStringLiteral("application-x-executable"));
         card->setIconPixmap(ic.pixmap(qMin<int>(cs.width() * 0.5, 72), qMin<int>(cs.width() * 0.5, 72)));
+        card->setUpgradable(!upgradeNewVersionFor(a).isEmpty());
         card->installEventFilter(this);   // 点击 → 启动（eventFilter 统一接管）
         m_grid->addWidget(card);
     }

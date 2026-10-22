@@ -17,6 +17,7 @@ class QLabel;
 class QButtonGroup;
 class QComboBox;
 
+class UpgradeManager;
 class TarotPanel : public DBlurEffectWidget {
     Q_OBJECT
 public:
@@ -52,6 +53,9 @@ private:
     void showReading(const AppEntry &a, const QRect &cardRect);   // 牌意解读浮层
     void hideReading();
     void showCatMenu(const AppEntry &a, const QPoint &globalPos); // 右键归类菜单
+    void showUpgradeCenter();                                     // ⬆ 应用升级中心
+    QString upgradeNewVersionFor(const AppEntry &a) const;        // 该应用的新版本号（无则空）
+    void applyUpgradeDots();                                      // 把可升级状态刷到卡片红点
     void toggleSlotMode();
     void enterSlotUi();
     void loadAppearance();
@@ -59,6 +63,8 @@ private:
     void applyAppearance();
 
     QVector<AppEntry> m_apps;
+    class UpgradeManager *m_updMgr = nullptr;
+    class QPushButton *m_updBtn = nullptr;
     QLineEdit *m_search = nullptr;
     QScrollArea *m_scroll = nullptr;
     QWidget *m_gridBox = nullptr;

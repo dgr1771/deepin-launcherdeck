@@ -91,6 +91,27 @@ void DeckCard::paintEvent(QPaintEvent *) {
 
     if (prog < 0.5) drawTarotBack(p);
     else drawFace(p);
+
+    // 升级红点：右上角（受翻转变换影响小，固定画在卡角）
+    if (m_upgradable) {
+        p.save();
+        p.resetTransform();                       // 摆脱翻面/浮起变换，钉死在卡右上角
+        const qreal r = qMax(8.0, width() * 0.085);
+        const QPointF c(width() - r - 4.0, r + 4.0);
+        QRadialGradient g(c, r);
+        g.setColorAt(0, QColor(255, 92, 96));
+        g.setColorAt(1, QColor(216, 54, 58));
+        p.setRenderHint(QPainter::Antialiasing, true);
+        p.setPen(QPen(QColor(255, 255, 255, 60), 1.2));
+        p.setBrush(g);
+        p.drawEllipse(c, r, r);
+        p.setPen(QPen(Qt::white, qMax(1.4, r * 0.16), Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
+        const double ar = r * 0.42;
+        p.drawLine(QPointF(c.x(), c.y() + ar * 0.7), QPointF(c.x(), c.y() - ar * 0.7));
+        p.drawLine(QPointF(c.x() - ar * 0.62, c.y() - ar * 0.06), QPointF(c.x(), c.y() - ar * 0.7));
+        p.drawLine(QPointF(c.x() + ar * 0.62, c.y() - ar * 0.06), QPointF(c.x(), c.y() - ar * 0.7));
+        p.restore();
+    }
 }
 
 // ---------------- 牌背：星夜 + 金框 + 角饰 + 花色徽章 ----------------
