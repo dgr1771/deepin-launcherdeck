@@ -571,6 +571,14 @@ void TarotPanel::showUpgradeCenter() {
     dlg.setWindowTitle(QStringLiteral("应用升级中心"));
     dlg.setModal(false);
     dlg.resize(520, 460);
+    // DTK5 下 QSS 对话框背景偶不生效 → QPalette 直设保底
+    QPalette dlgPal = dlg.palette();
+    dlgPal.setColor(QPalette::Window, QColor(27, 35, 64));
+    dlgPal.setColor(QPalette::Base, QColor(22, 32, 58));
+    dlgPal.setColor(QPalette::Text, QColor(238, 242, 255));
+    dlgPal.setColor(QPalette::ButtonText, QColor(238, 242, 255));
+    dlgPal.setColor(QPalette::Button, QColor(45, 55, 85));
+    dlg.setPalette(dlgPal);
     dlg.setStyleSheet(QStringLiteral(
         "QDialog { background: #1b2340; color: #eef2ff; }"
         "QLabel { color: #eef2ff; }"
@@ -596,6 +604,8 @@ void TarotPanel::showUpgradeCenter() {
         "QWidget#updList QLabel { color: #ffd782; font-weight: 700; }"));
     auto *listBox = new QWidget(scroll);
     listBox->setObjectName(QStringLiteral("updList"));
+    listBox->setPalette(dlgPal);
+    scroll->viewport()->setPalette(dlgPal);
     auto *listLay = new QVBoxLayout(listBox);
     listLay->setContentsMargins(6, 2, 6, 2);
     listLay->setSpacing(2);
