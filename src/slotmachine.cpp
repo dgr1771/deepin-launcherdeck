@@ -11,9 +11,9 @@
 SlotMachineBoard::SlotMachineBoard(QWidget *parent) : QWidget(parent) {
     setAttribute(Qt::WA_TranslucentBackground);
     setMouseTracking(true);
-    m_symbols = {QStringLiteral("🍒"), QStringLiteral("7"), QStringLiteral("♦"),
+    m_symbols = QStringList{QStringLiteral("🍒"), QStringLiteral("7"), QStringLiteral("♦"),
                  QStringLiteral("BAR"), QStringLiteral("★"), QStringLiteral("♠")};
-    m_reels = {m_symbols[0], m_symbols[1], m_symbols[2], m_symbols[3], m_symbols[4]};
+    m_reels = QStringList{m_symbols[0], m_symbols[1], m_symbols[2], m_symbols[3], m_symbols[4]};
     m_winCols = QVector<bool>(5, false);
     m_timer = new QTimer(this);
     m_timer->setInterval(72);
@@ -78,7 +78,7 @@ void SlotMachineBoard::finishSpin() {
     // 纯娱乐展示：每次都中奖，不连接真实货币或支付系统。
     if (pattern == 0) {
         const QString symbol = QStringLiteral("7");
-        m_reels = {symbol, symbol, symbol, symbol, symbol};
+        m_reels = QStringList{symbol, symbol, symbol, symbol, symbol};
         m_winTitle = QStringLiteral("MEGA WIN");
         const int jackpot = 1000;
         m_coins = qMin(1000, m_coins + jackpot);
@@ -88,22 +88,22 @@ void SlotMachineBoard::finishSpin() {
         m_winTitle = QStringLiteral("✦ SUPER JACKPOT · MEGA WIN ✦");
         m_message = QStringLiteral("🎉 五连大奖！+%1 金币 · JACKPOT").arg(jackpot);
     } else if (pattern == 1) {
-        m_reels = {QStringLiteral("BAR"), QStringLiteral("BAR"), QStringLiteral("BAR"), QStringLiteral("BAR"), QStringLiteral("★")};
+        m_reels = QStringList{QStringLiteral("BAR"), QStringLiteral("BAR"), QStringLiteral("BAR"), QStringLiteral("BAR"), QStringLiteral("★")};
         m_winTitle = QStringLiteral("BIG WIN");
         m_coins = qMin(1000, m_coins + 300);
         m_message = QStringLiteral("💎 四连 BAR！+300 金币 · 华丽收官");
     } else if (pattern == 2) {
-        m_reels = {QStringLiteral("🔔"), QStringLiteral("🍋"), QStringLiteral("🔔"), QStringLiteral("🍒"), QStringLiteral("🔔")};
+        m_reels = QStringList{QStringLiteral("🔔"), QStringLiteral("🍋"), QStringLiteral("🔔"), QStringLiteral("🍒"), QStringLiteral("🔔")};
         m_winTitle = QStringLiteral("SCATTER BONUS");
         m_coins = qMin(1000, m_coins + 220);
         m_message = QStringLiteral("🔔 三枚铃铛触发奖励！+220 金币");
     } else if (pattern == 3) {
-        m_reels = {QStringLiteral("♠"), QStringLiteral("♦"), QStringLiteral("7"), QStringLiteral("♦"), QStringLiteral("♠")};
+        m_reels = QStringList{QStringLiteral("♠"), QStringLiteral("♦"), QStringLiteral("7"), QStringLiteral("♦"), QStringLiteral("♠")};
         m_winTitle = QStringLiteral("LUCKY LINE");
         m_coins = qMin(1000, m_coins + 150);
         m_message = QStringLiteral("✨ 幸运中线命中！+150 金币 · 好运连成线");
     } else {
-        m_reels = {QStringLiteral("🍒"), QStringLiteral("🍒"), QStringLiteral("★"), QStringLiteral("🍒"), QStringLiteral("🍒")};
+        m_reels = QStringList{QStringLiteral("🍒"), QStringLiteral("🍒"), QStringLiteral("★"), QStringLiteral("🍒"), QStringLiteral("🍒")};
         m_winTitle = QStringLiteral("FRUIT FESTIVAL");
         m_coins = qMin(1000, m_coins + prize);
         m_message = QStringLiteral("🍒 水果连线中奖！+%1 金币 · 再来一把").arg(prize);
