@@ -8,7 +8,8 @@
 UpgradeManager::UpgradeManager(QObject *parent) : QObject(parent) {}
 
 void UpgradeManager::checkUpgrades(bool force) {
-    if (m_busy) return;
+    if (m_busy) { qWarning() << "[UM] skip busy"; return; }
+    qWarning() << "[UM] check called force=" << force;
     const qint64 now = QDateTime::currentMSecsSinceEpoch();
     if (!force && m_lastCheckMs && now - m_lastCheckMs < 6 * 3600 * 1000) {
         emit checked(m_items);
@@ -20,6 +21,7 @@ void UpgradeManager::checkUpgrades(bool force) {
 void UpgradeManager::runAptList(bool force) {
     Q_UNUSED(force);
     m_busy = true;
+    qWarning() << "[UM] runAptList starting";
     m_proc = new QProcess(this);
     connect(m_proc, QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished), this, [this](int code, QProcess::ExitStatus) {
         const QString out = QString::fromUtf8(m_proc->readAllStandardOutput());
