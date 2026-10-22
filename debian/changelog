@@ -4,7 +4,7 @@ deepin-launcherdeck (0.9.6-1) unstable; urgency=medium
   * 升级中心勾选后一键批量升级（pkexec 授权，一次密码带全部包）
   * 右键卡片「⬆ 升级到 vX」直达；工具栏 ⬆ 升级按钮带数量
 
- -- dgr <dgr@dgr-PC>  Thu, 27 Aug 2026 14:10:00 +0800
+ -- dgr <dgr1771@users.noreply.github.com>  Thu, 22 Oct 2026 13:30:00 +0800
 
 deepin-launcherdeck (0.9.5-1) unstable; urgency=medium
 
