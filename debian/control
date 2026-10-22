@@ -5,11 +5,10 @@ Maintainer: dgr <dgr1771@users.noreply.github.com>
 Build-Depends: debhelper-compat (= 13),
                cmake,
                pkg-config,
-               qt6-base-dev (>= 6.6),
-               qt6-base-dev-tools,
-               libdtk6core-dev,
-               libdtk6gui-dev,
-               libdtk6widget-dev,
+               qtbase5-dev,
+               libdtkcore-dev,
+               libdtkgui-dev,
+               libdtkwidget-dev,
                libx11-dev,
                libxcb1-dev
 Standards-Version: 4.6.0
@@ -19,12 +18,12 @@ Package: deepin-launcherdeck
 Architecture: any
 Depends: ${shlibs:Depends},
          ${misc:Depends},
-         libqt6core6,
-         libqt6gui6,
-         libqt6widgets6,
-         libdtk6core,
-         libdtk6gui,
-         libdtk6widget
+         libqt5core5a,
+         libqt5gui5,
+         libqt5widgets5,
+         libdtkcore5,
+         libdtkgui5,
+         libdtkwidget5
 Description: 唤启——应用一屏启动器（DTK 原生）
  托盘常驻 + Ctrl+J 全局热键唤起的应用启动器，deepin 原生 DTK6 打造。
  .
