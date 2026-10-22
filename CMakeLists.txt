@@ -6,33 +6,30 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_AUTOMOC ON)
 include(GNUInstallDirs)
 
-# Qt6/DTK6（deepin 25）优先，回退 Qt5/DTK5（UOS 专业版 eagle）
+# Qt6/DTK6（deepin 25）优先；回退：UOS 专业版 eagle 的裁剪 Qt5.11/DTK5 无 cmake
+# 导入目标 -> 全走 pkg-config 变量链接（.pc 文件两侧都有，绕开 config 怪癖）
 find_package(Qt6 QUIET COMPONENTS Core Gui Widgets)
 if (Qt6_FOUND)
     find_package(Dtk6 REQUIRED COMPONENTS Core Gui Widget)
     set(DECK_QT_LIBS Qt6::Core Qt6::Gui Qt6::Widgets)
     set(DECK_DTK_LIBS Dtk6::Core Dtk6::Gui Dtk6::Widget)
 else()
-    # UOS eagle 的 Qt 5.11 裁剪版不生成 Qt5::Core 导入目标 → 按变量链接
-    find_package(Qt5Core REQUIRED)
-    find_package(Qt5Gui REQUIRED)
-    find_package(Qt5Widgets REQUIRED)
-    find_package(DtkCore REQUIRED)
-    find_package(DtkGui REQUIRED)
-    find_package(DtkWidget REQUIRED)
-    set(DECK_QT_LIBS ${Qt5Core_LIBRARIES} ${Qt5Gui_LIBRARIES} ${Qt5Widgets_LIBRARIES})
-    set(DECK_DTK_LIBS ${DtkCore_LIBRARIES} ${DtkGui_LIBRARIES} ${DtkWidget_LIBRARIES})
-    include_directories(${Qt5Core_INCLUDE_DIRS} ${Qt5Gui_INCLUDE_DIRS} ${Qt5Widgets_INCLUDE_DIRS}
-                        ${DtkCore_INCLUDE_DIRS} ${DtkGui_INCLUDE_DIRS} ${DtkWidget_INCLUDE_DIRS})
-    foreach(d ${Qt5Core_DEFINITIONS} ${Qt5Gui_DEFINITIONS} ${Qt5Widgets_DEFINITIONS})
-        string(REGEX REPLACE "^-D" "" d2 "${d}")
-        add_compile_definitions(${d2})
-    endforeach()
-    add_compile_definitions(DECK_QT5)
-    if(NOT TARGET Qt5::Core)
-        message(FATAL_ERROR "CONFIGURE-CHECK: Qt5::Core target missing")
-    endif()
+    find_package(PkgConfig REQUIRED)
+    pkg_check_modules(DECK_QT5CORE REQUIRED Qt5Core)
+    pkg_check_modules(DECK_QT5GUI REQUIRED Qt5Gui)
+    pkg_check_modules(DECK_QT5WID REQUIRED Qt5Widgets)
+    pkg_check_modules(DECK_DTKCORE REQUIRED dtkcore)
+    pkg_check_modules(DECK_DTKGUI REQUIRED dtkgui)
+    pkg_check_modules(DECK_DTKWIDGET REQUIRED dtkwidget)
+    set(DECK_QT_LIBS ${DECK_QT5CORE_LIBRARIES} ${DECK_QT5GUI_LIBRARIES} ${DECK_QT5WID_LIBRARIES}
+                     ${DECK_DTKCORE_LIBRARIES} ${DECK_DTKGUI_LIBRARIES} ${DECK_DTKWIDGET_LIBRARIES})
+    include_directories(${DECK_QT5CORE_INCLUDE_DIRS} ${DECK_QT5GUI_INCLUDE_DIRS} ${DECK_QT5WID_INCLUDE_DIRS}
+                        ${DECK_DTKCORE_INCLUDE_DIRS} ${DECK_DTKGUI_INCLUDE_DIRS} ${DECK_DTKWIDGET_INCLUDE_DIRS})
+    add_compile_options(${DECK_QT5CORE_CFLAGS_OTHER} ${DECK_QT5GUI_CFLAGS_OTHER} ${DECK_QT5WID_CFLAGS_OTHER}
+                        ${DECK_DTKCORE_CFLAGS_OTHER} ${DECK_DTKGUI_CFLAGS_OTHER} ${DECK_DTKWIDGET_CFLAGS_OTHER})
+    add_compile_definitions(DECK_QT5)
 endif()
+
 find_package(X11 REQUIRED)
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(XCB REQUIRED IMPORTED_TARGET xcb)   # 全局热键的独立 xcb 连接
@@ -48,9 +45,8 @@ add_executable(deepin-launcherdeck
     src/upgrademanager.cpp
 )
 
-target_include_directories(deepin-launcherdeck PRIVATE ${X11_INCLUDE_DIR})
 target_link_libraries(deepin-launcherdeck PRIVATE
-${DECK_QT_LIBS}
+${DECK_QT_LIBS}
     ${DECK_DTK_LIBS}
     ${X11_LIBRARIES}
     PkgConfig::XCB
