@@ -4,6 +4,7 @@ project(deepin-launcherdeck VERSION 0.1.0 LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_AUTOMOC ON)
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)   # UOS Qt5 -reduce-relocations 要求 -fPIC
 include(GNUInstallDirs)
 
 # Qt6/DTK6（deepin 25）优先；回退：UOS 专业版 eagle 的裁剪 Qt5.11/DTK5 无 cmake
