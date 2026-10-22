@@ -588,7 +588,14 @@ void TarotPanel::showUpgradeCenter() {
 
     auto *scroll = new QScrollArea(&dlg);
     scroll->setWidgetResizable(true);
+    // DTK5 下 QScrollArea 视口默认浅色调色板，深色文字不可读——统一切深底
+    scroll->setStyleSheet(QStringLiteral(
+        "QScrollArea { border: none; background: #16203a; }"
+        "QWidget#updList { background: #16203a; }"
+        "QWidget#updList QCheckBox { color: #eef2ff; font-size: 13px; spacing: 8px; }"
+        "QWidget#updList QLabel { color: #ffd782; font-weight: 700; }"));
     auto *listBox = new QWidget(scroll);
+    listBox->setObjectName(QStringLiteral("updList"));
     auto *listLay = new QVBoxLayout(listBox);
     listLay->setContentsMargins(6, 2, 6, 2);
     listLay->setSpacing(2);
