@@ -25,9 +25,9 @@ void UpgradeManager::runAptList(bool force) {
         m_proc->deleteLater(); m_proc = nullptr;
         if (code != 0) { m_busy = false; emit checkFailed(QStringLiteral("apt 查询失败（代码 %1）").arg(code)); return; }
 
-        // 行格式：package/repo  newVersion  arch  [upgradable from: oldVersion]
+        // 行格式：package/repo  newVersion  arch  [可从该版本升级：X]（兼容英文 upgradable from）
         static const QRegularExpression re(
-            QStringLiteral("^([^/\\s]+)/\\S+\\s+(\\S+)\\s+\\S+\\s+\\[upgradable from:\\s*([^\\]]+)\\]\\s*$"));
+            QStringLiteral("^([^/\\s]+)/\\S+\\s+(\\S+)\\s+\\S+\\s+\\[^\]]*[:：]\\s*([^\\]]+)\\]\\s*$"));
         m_pending.clear();
         for (const QString &raw : out.split(QLatin1Char('\n'))) {
             const auto m = re.match(raw.trimmed());
