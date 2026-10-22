@@ -15,6 +15,7 @@ if (Qt6_FOUND)
     set(DECK_QT_LIBS Qt6::Core Qt6::Gui Qt6::Widgets)
     set(DECK_DTK_LIBS Dtk6::Core Dtk6::Gui Dtk6::Widget)
 else()
+    find_package(Qt5Core QUIET)   # 只为拿 moc 路径供 AUTOMOC 用（库仍走 pkg-config）
     find_package(PkgConfig REQUIRED)
     pkg_check_modules(DECK_QT5CORE REQUIRED Qt5Core)
     pkg_check_modules(DECK_QT5GUI REQUIRED Qt5Gui)
