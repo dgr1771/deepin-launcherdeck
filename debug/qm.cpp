@@ -17,8 +17,11 @@ int main(int argc, char *argv[]) {
                p->readAllStandardOutput().trimmed().right(60).constData());
         a.quit();
     });
-    printf("threads before QProcess=%d
-", QThread::currentThread() == QThread::currentThread()); p->start("bash", QStringList() << "-c" << "apt list --upgradable 2>/dev/null | wc -l");
+    auto *deadThread = QThread::create([]{ QThread::sleep(30); });
+    deadThread->start();   // 模拟 DTK 启动产生的常驻线程
+    printf("thread started
+");
+    p->start("bash", QStringList() << "-c" << "apt list --upgradable 2>/dev/null | wc -l");
     QTimer::singleShot(20000, [&]{ printf("TIMEOUT - finished never fired\n"); a.quit(); });
     return a.exec();
 }
