@@ -5,6 +5,7 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)   # UOS Qt5 -reduce-relocations 要求 -fPIC
+add_compile_options(-fPIC)   # 双保险：POSITION_INDEPENDENT_CODE 在部分老 cmake 组合下不传导
 include(GNUInstallDirs)
 
 # Qt6/DTK6（deepin 25）优先；回退：UOS 专业版 eagle 的裁剪 Qt5.11/DTK5 无 cmake
