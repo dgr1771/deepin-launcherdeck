@@ -20,7 +20,7 @@ void UpgradeManager::runAptList(bool force) {
     Q_UNUSED(force);
     m_busy = true;
     m_proc = new QProcess(this);
-    connect(m_proc, &QProcess::finished, this, [this](int code, QProcess::ExitStatus) {
+    connect(m_proc, QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished), this, [this](int code, QProcess::ExitStatus) {
         const QString out = QString::fromUtf8(m_proc->readAllStandardOutput());
         m_proc->deleteLater(); m_proc = nullptr;
         if (code != 0) { m_busy = false; emit checkFailed(QStringLiteral("apt 查询失败（代码 %1）").arg(code)); return; }
@@ -45,7 +45,7 @@ void UpgradeManager::runAptList(bool force) {
         QStringList pkgs;
         for (const auto &it : m_pending) pkgs << it.package;
         m_proc = new QProcess(this);
-        connect(m_proc, &QProcess::finished, this, [this](int, QProcess::ExitStatus) {
+        connect(m_proc, QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished), this, [this](int, QProcess::ExitStatus) {
             const QString out = QString::fromUtf8(m_proc->readAllStandardOutput());
             m_proc->deleteLater(); m_proc = nullptr;
             QHash<QString, QString> df;
@@ -76,7 +76,7 @@ void UpgradeManager::upgradePackages(const QStringList &packages) {
         const QString tail = QString::fromUtf8(m_proc->readAllStandardOutput()).simplified();
         if (!tail.isEmpty()) emit upgradeProgress(tail.right(120));
     });
-    connect(m_proc, &QProcess::finished, this, [this, packages](int code, QProcess::ExitStatus) {
+    connect(m_proc, QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished), this, [this, packages](int code, QProcess::ExitStatus) {
         const QString out = QString::fromUtf8(m_proc->readAllStandardOutput()).simplified();
         m_proc->deleteLater(); m_proc = nullptr;
         m_busy = false;

@@ -41,7 +41,11 @@ DeckCard::DeckCard(const AppEntry &a, QWidget *parent) : QWidget(parent), m_app(
     });
 }
 
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
 void DeckCard::enterEvent(QEnterEvent *) {
+#else
+void DeckCard::enterEvent(QEvent *) {
+#endif
     m_lift->setDirection(QVariantAnimation::Forward);
     m_flip->setDirection(QVariantAnimation::Forward);
     m_lift->start();
