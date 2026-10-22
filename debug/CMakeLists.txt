@@ -1,0 +1,6 @@
+cmake_minimum_required(VERSION 3.13)
+project(qtprobe CXX)
+set(CMAKE_AUTOMOC ON)
+find_package(Qt5Core REQUIRED)
+add_executable(qtprobe main.cpp)
+target_link_libraries(qtprobe Qt5::Core)
