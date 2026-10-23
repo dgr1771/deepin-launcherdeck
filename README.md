@@ -2,10 +2,10 @@
 
 > 所有应用，一屏全览，一唤即启。deepin / UOS 双平台原生应用启动器（DTK6/Qt6 · DTK5/Qt5）。
 
-![唤启主界面](contest-shots/1-main.png)
+![唤启主界面](contest-shots-v095/1-main-panel.png)
 
-![应用升级中心](docs/screenshot-upgrade.png)
-*⬆ 应用升级中心：可升级应用红点提醒，勾选后一键全部静默升级（不启动程序）*
+![应用升级红点提醒](docs/screenshot-upgrade.png)
+*⬆ 可升级应用卡片红点提醒 + 工具栏「升级 N」角标；升级中心内勾选后一键全部静默升级（不启动程序）*
 
 ## 功能介绍
 
